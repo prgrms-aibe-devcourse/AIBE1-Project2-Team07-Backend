@@ -1,0 +1,243 @@
+# 워크플로우 이름: 1번째 단계 - 테스트 실행
+name: 1. Run Tests
+
+# 트리거 조건: main 브랜치에 push될 때만 실행됩니다.
+# paths 조건은 src 디렉토리 내 파일이 변경되었을 때만 워크플로우가 실행됨을 의미합니다.
+on:
+  push:
+    branches:
+      - main  # main 브랜치에 대해서만 실행
+    paths:
+      - 'src/**'  # src 디렉토리 내 파일이 변경될 때만 실행
+
+# GitHub Actions에 필요한 권한 설정
+permissions:
+  checks: write
+  contents: read
+
+# 실행할 작업(job) 정의
+jobs:
+  # 테스트 작업 정의
+  test:
+    # 실행 환경: Ubuntu 최신 버전
+    runs-on: ubuntu-latest
+
+    # 작업 단계(steps) 정의
+    steps:
+      # 1. 코드 가져오기: GitHub 저장소에서 코드를 가져옵니다.
+      - name: Checkout repository
+        uses: actions/checkout@v4  # 공식 checkout 액션 v4 버전 사용
+
+      # 2. JDK 설정: Java 17 설치 (Spring Boot 프로젝트용)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3  # 공식 Java 설정 액션 v3 버전 사용
+        with:
+          java-version: '17'  # Java 버전 지정
+          distribution: 'temurin'  # JDK 배포판 지정 (Eclipse Temurin)
+
+      # 3. Gradle 캐시 설정: 빌드 속도 향상을 위해 Gradle 의존성 캐싱
+      - name: Cache Gradle packages
+        uses: actions/cache@v3  # 공식 캐시 액션 v3 버전 사용
+        with:
+          path: |  # 캐시할 경로 (여러 줄로 표현)
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          # 캐시 키 설정: OS와 Gradle 파일 해시값 조합으로 고유 키 생성
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          # 캐시 복원 키: 정확히 일치하는 캐시가 없을 때 사용
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # 4. 테스트 실행: Gradle 테스트 명령 실행
+      - name: Run tests
+        id: test_run
+        run: chmod +x ./gradlew && ./gradlew test --scan  # gradlew에 실행 권한 부여 후 테스트 실행
+        continue-on-error: true  # 테스트가 실패해도 다음 단계로 진행
+
+      # 5. 테스트 결과 JUnit 형식으로 GitHub Actions에 표시
+      - name: Publish Test Report (JUnit)
+        uses: mikepenz/action-junit-report@v4
+        if: always()  # 테스트 결과에 상관없이 항상 실행
+        with:
+          report_paths: '**/build/test-results/**/*.xml'
+          detailed_summary: true  # 상세 요약 표시
+          include_passed: true    # 통과한 테스트도 표시
+          check_name: '테스트 리포트'
+          fail_on_failure: false  # 테스트 실패시에도 워크플로우는 계속 진행
+
+      # 6. 테스트 결과 추가 표시 (UI 향상)
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()  # 테스트 결과에 상관없이 항상 실행
+        with:
+          files: |
+            **/build/test-results/**/*.xml
+          report_individual_runs: true
+          check_name: '테스트 결과 요약'
+          comment_mode: always
+          compare_to_earlier_commit: true
+
+      # 7. 테스트 결과 요약 계산 및 GitHub 작업 요약에 표시
+      - name: Calculate Test Summary
+        id: test_summary
+        if: always()
+        run: |
+          TOTAL_TESTS=$(find . -path "*/build/test-results/*/*.xml" -type f -exec grep -l "<testcase" {} \; | xargs grep -h "<testcase" | wc -l || echo 0)
+          FAILED_TESTS=$(find . -path "*/build/test-results/*/*.xml" -type f -exec grep -l "<failure" {} \; | xargs grep -h "<failure" | wc -l || echo 0)
+          SKIPPED_TESTS=$(find . -path "*/build/test-results/*/*.xml" -type f -exec grep -l "<skipped" {} \; | xargs grep -h "<skipped" | wc -l || echo 0)
+          SUCCESS_TESTS=$((TOTAL_TESTS - FAILED_TESTS - SKIPPED_TESTS))
+          
+          echo "total_tests=$TOTAL_TESTS" >> $GITHUB_OUTPUT
+          echo "success_tests=$SUCCESS_TESTS" >> $GITHUB_OUTPUT
+          echo "failed_tests=$FAILED_TESTS" >> $GITHUB_OUTPUT
+          echo "skipped_tests=$SKIPPED_TESTS" >> $GITHUB_OUTPUT
+          
+          # 테스트 상태 결정
+          if [ "$FAILED_TESTS" -gt 0 ]; then
+            echo "Test completed with failures: $FAILED_TESTS failed, $SUCCESS_TESTS succeeded, $SKIPPED_TESTS skipped out of $TOTAL_TESTS total tests" > test_status.txt
+            echo "status=failed" >> $GITHUB_OUTPUT
+          else
+            echo "Test completed successfully: $SUCCESS_TESTS succeeded, $SKIPPED_TESTS skipped out of $TOTAL_TESTS total tests" > test_status.txt
+            echo "status=success" >> $GITHUB_OUTPUT
+          fi
+          
+          # GitHub 작업 요약에 테스트 결과 표시
+          echo "## 🧪 테스트 결과 요약" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 카테고리 | 수량 | 상태 |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 총 테스트 | $TOTAL_TESTS | - |" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$SUCCESS_TESTS" -gt 0 ]; then
+            SUCCESS_PERCENT=$(echo "scale=2; ($SUCCESS_TESTS / $TOTAL_TESTS) * 100" | bc -l)
+            echo "| 성공 | $SUCCESS_TESTS | ✅ ($SUCCESS_PERCENT%) |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 성공 | 0 | ✅ (0%) |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "$FAILED_TESTS" -gt 0 ]; then
+            FAILED_PERCENT=$(echo "scale=2; ($FAILED_TESTS / $TOTAL_TESTS) * 100" | bc -l)
+            echo "| 실패 | $FAILED_TESTS | ❌ ($FAILED_PERCENT%) |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 실패 | 0 | ❌ (0%) |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "$SKIPPED_TESTS" -gt 0 ]; then
+            SKIPPED_PERCENT=$(echo "scale=2; ($SKIPPED_TESTS / $TOTAL_TESTS) * 100" | bc -l)
+            echo "| 스킵 | $SKIPPED_TESTS | ⏭️ ($SKIPPED_PERCENT%) |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 스킵 | 0 | ⏭️ (0%) |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "$FAILED_TESTS" -gt 0 ]; then
+            echo "### ❌ 테스트 실패" >> $GITHUB_STEP_SUMMARY
+            echo "테스트 $FAILED_TESTS개가 실패했습니다. 자세한 내용은 아래 테스트 보고서를 확인하세요." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ✅ 모든 테스트 통과" >> $GITHUB_STEP_SUMMARY
+            echo "모든 테스트가 성공적으로 통과했습니다!" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          cat test_status.txt
+
+      # 8. HTML 테스트 보고서 생성 및 리포지토리에 표시
+      - name: Generate HTML Test Report
+        if: always()
+        run: |
+          mkdir -p test-reports
+          
+          # HTML 테스트 보고서 헤더 생성
+          cat << EOF > test-reports/test-summary.html
+          <!DOCTYPE html>
+          <html lang="ko">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>테스트 결과 요약</title>
+            <style>
+              body { font-family: 'Noto Sans KR', sans-serif; margin: 0; padding: 20px; color: #333; }
+              .container { max-width: 800px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 20px; }
+              h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+              .summary { display: flex; justify-content: space-around; margin-bottom: 30px; text-align: center; }
+              .summary-item { flex: 1; padding: 15px; }
+              .summary-item .number { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+              .success { color: #27ae60; }
+              .failure { color: #e74c3c; }
+              .skipped { color: #f39c12; }
+              .status { text-align: center; padding: 15px; margin: 20px 0; border-radius: 4px; font-weight: bold; }
+              .status.success { background-color: #d5f5e3; }
+              .status.failure { background-color: #fadbd8; }
+              .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #7f8c8d; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>🧪 테스트 결과 요약</h1>
+              <div class="summary">
+                <div class="summary-item">
+                  <div class="number">${{ steps.test_summary.outputs.total_tests }}</div>
+                  <div>총 테스트</div>
+                </div>
+                <div class="summary-item">
+                  <div class="number success">${{ steps.test_summary.outputs.success_tests }} ✅</div>
+                  <div>성공</div>
+                </div>
+                <div class="summary-item">
+                  <div class="number failure">${{ steps.test_summary.outputs.failed_tests }} ❌</div>
+                  <div>실패</div>
+                </div>
+                <div class="summary-item">
+                  <div class="number skipped">${{ steps.test_summary.outputs.skipped_tests }} ⏭️</div>
+                  <div>스킵</div>
+                </div>
+              </div>
+          
+              <div class="status ${{ steps.test_summary.outputs.status == 'success' && 'success' || 'failure' }}">
+                테스트 결과: ${{ steps.test_summary.outputs.status == 'success' && '✅ 성공' || '❌ 실패' }}
+              </div>
+          
+              <div class="footer">
+                실행 시간: $(date)
+                <br>
+                이 보고서는 GitHub Actions에서 자동으로 생성되었습니다.
+              </div>
+            </div>
+          </body>
+          </html>
+          EOF
+          
+          # 마크다운 요약 보고서도 생성
+          cat << EOF > test-reports/test-summary.md
+          # 테스트 결과 요약
+          
+          ## 통계
+          - 총 테스트 수: ${{ steps.test_summary.outputs.total_tests }}
+          - 성공: ${{ steps.test_summary.outputs.success_tests }} ✅
+          - 실패: ${{ steps.test_summary.outputs.failed_tests }} ❌
+          - 스킵: ${{ steps.test_summary.outputs.skipped_tests }} ⏭️
+          
+          ## 상태
+          - 테스트 결과: ${{ steps.test_summary.outputs.status == 'success' && '✅ 성공' || '❌ 실패' }}
+          
+          *이 보고서는 자동으로 생성되었습니다.*
+          EOF
+
+      # 9. 테스트 보고서 아티팩트로 업로드
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            test-reports/
+            **/build/reports/tests/
+          retention-days: 1  # 보고서를 1일간 보관
+
+      # 10. 테스트 결과 아티팩트 업로드: 다른 워크플로우에서 사용할 수 있도록 결과 저장
+      - name: Upload Test Status
+        if: always()  # 항상 테스트 상태 업로드
+        uses: actions/upload-artifact@v4  # 공식 아티팩트 업로드 액션 v4 버전 사용
+        with:
+          name: test-status  # 아티팩트 이름
+          path: test_status.txt  # 업로드할 파일 경로
+          retention-days: 7  # 아티팩트 보관 기간(일)

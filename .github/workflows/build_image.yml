@@ -1,0 +1,64 @@
+# 워크플로우 이름: 2번째 단계 - Docker 이미지 빌드
+name: 2. Build Docker Image
+
+# 트리거 조건: 테스트 워크플로우가 성공적으로 완료되면 실행됩니다.
+# workflow_run 트리거는 다른 워크플로우의 실행 결과에 따라 이 워크플로우를 실행합니다.
+on:
+  workflow_run:
+    workflows: ["1. Run Tests"]  # "1. Run Tests" 워크플로우의 실행 결과를 확인
+    types:
+      - completed  # 해당 워크플로우가 완료된 시점에 실행
+    branches:
+      - main  # main 브랜치에 대해서만 실행
+
+# 실행할 작업(job) 정의
+jobs:
+  # 빌드 작업 정의
+  build:
+    # 조건문: 테스트 워크플로우가 성공했을 때만 실행
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # 실행 환경: Ubuntu 최신 버전
+    runs-on: ubuntu-latest
+
+    # GitHub Container Registry(GHCR)에 이미지를 푸시하는 데 필요한 권한 설정
+    permissions:
+      contents: read  # 저장소 내용 읽기 권한
+      packages: write  # 패키지(Docker 이미지) 쓰기 권한
+
+    # 작업 단계(steps) 정의
+    steps:
+      # 1. 커밋 메시지 표시
+      - name: Display Commit Message
+        run: |
+          echo "Commit Message: ${{ github.event.workflow_run.head_commit.message }}"
+
+      # 2. 코드 가져오기: GitHub 저장소에서 코드를 가져옵니다.
+      - name: Checkout repository
+        uses: actions/checkout@v4  # 공식 checkout 액션 v4 버전 사용
+
+      # 2. GitHub Container Registry 로그인: Docker 이미지를 푸시하기 위한
+      # 인증 단계로, 현재 사용자(github.actor)와 자동 생성된 토큰을 사용합니다.
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3  # Docker 로그인 액션 v3 버전 사용
+        with:
+          registry: ghcr.io  # GitHub Container Registry URL
+          username: ${{ github.actor }}  # 현재 워크플로우를 실행하는 사용자
+          password: ${{ secrets.GITHUB_TOKEN }}  # GitHub에서 자동 생성된 토큰
+
+      # 3. Docker 메타데이터 추출: 이미지 태그와 레이블 정보를 생성합니다.
+      # 이 단계에서는 이미지에 적용할 태그와 레이블을 자동으로 생성합니다.
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta  # 이 단계의 출력을 참조하기 위한 ID
+        uses: docker/metadata-action@v5  # Docker 메타데이터 액션 v5 버전 사용
+        with:
+          images: ghcr.io/${{ github.repository }}  # 이미지 이름 설정(저장소 이름 기반)
+
+      # 4. Docker 이미지 빌드 및 푸시: Dockerfile을 기반으로 이미지를 빌드하고 GHCR에 업로드합니다.
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5  # Docker 빌드/푸시 액션 v5 버전 사용
+        with:
+          context: .  # 빌드 컨텍스트(현재 디렉토리)
+          file: ./docker/Dockerfile  # Dockerfile 경로
+          push: true  # 빌드 후 이미지 푸시 활성화
+          tags: ${{ steps.meta.outputs.tags }}  # 메타데이터에서 가져온 태그 적용
+          labels: ${{ steps.meta.outputs.labels }}  # 메타데이터에서 가져온 레이블 적용
