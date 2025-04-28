@@ -1,19 +1,3 @@
----
-name: "✨ 기능 추가 (feat)"
-about: 새로운 기능을 제안하거나 추가할 때 사용합니다.
-title: ''
-labels: "\U0001F31F 기능 추가"
-assignees: ''
-
----
-
----
-name: ✨ 기능 요청 (feature)
-about: 새로운 기능을 제안합니다.
-title: 'feat: 기능 제목'
-assignees: ''
----
-
 ## 🥸 어떤 기능인가요?
 > 추가하려는 기능을 설명해주세요.
 
