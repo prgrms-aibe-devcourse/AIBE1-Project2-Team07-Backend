@@ -1,0 +1,71 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'REGISTRY', defaultValue: 'ghcr.io', description: 'Docker Registry 주소')
+        string(name: 'IMAGE_NAME', defaultValue: 'lucky-0111/pr-practice', description: 'Docker 이미지 이름')
+        string(name: 'IMAGE_TAG', defaultValue: 'main', description: 'Docker 이미지 태그')
+        string(name: 'CONTAINER_NAME', defaultValue: 'myapp-container', description: '실행할 컨테이너 이름')
+        string(name: 'PORT', defaultValue: '8443', description: '컨테이너 포트')
+    }
+
+    environment {
+        IMAGE = "${params.REGISTRY}/${params.IMAGE_NAME}:${params.IMAGE_TAG}"
+    }
+
+    stages {
+        stage('Authenticate with GHCR') {
+            steps {
+                echo 'GHCR에 인증 중...'
+                withCredentials([string(credentialsId: 'github_access_token', variable: 'GITHUB_TOKEN')]) {
+                    sh 'echo $GITHUB_TOKEN | docker login ghcr.io -u Lucky-0111 --password-stdin'
+                }
+            }
+        }
+
+        stage('Pull Docker Image') {
+            steps {
+                echo "Docker 이미지 가져오는 중... (이미지: \$IMAGE)"
+
+                // 기존 이미지 제거 (있다면)
+                sh "docker rmi -f \$IMAGE || true"
+
+                // GHCR에서 최신 이미지 가져오기
+                sh "docker pull \$IMAGE"
+            }
+        }
+
+        stage('Stop Previous Container') {
+            steps {
+                echo '기존 컨테이너 중지 중...'
+
+                // 컨테이너가 실행 중이면 중지 후 제거
+                sh "docker stop \$CONTAINER_NAME || true"
+                sh "docker rm \$CONTAINER_NAME || true"
+            }
+        }
+
+        stage('Run New Container') {
+            steps {
+                echo '새 컨테이너 실행 중...'
+
+                // 새 이미지로 컨테이너 실행
+                sh """
+                docker run -d \
+                  --name \$CONTAINER_NAME \
+                  -p \$PORT:\$PORT \
+                  \$IMAGE
+                """
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo '배포 실패 ❌'
+        }
+        success {
+            echo '배포 성공 ✅'
+        }
+    }
+}
