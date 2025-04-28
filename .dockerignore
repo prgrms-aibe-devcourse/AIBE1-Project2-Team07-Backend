@@ -1,0 +1,29 @@
+# Git 관련 파일
+.git/
+
+# 빌드 결과물
+target/
+build/
+
+# 테스트 코드 및 결과물
+test/
+tests/
+
+# IDE 설정 파일들
+.vscode/
+.idea/
+
+# 운영체제 관련 파일
+.DS_Store
+Thumbs.db
+
+# 로그 파일
+*.log
+
+# 임시 파일들
+*.tmp
+*.bak
+*.swp
+
+# 문서 파일
+README.md
