@@ -1,9 +1,7 @@
-package org.lucky0111.pettalk.domain.entity;
+package org.lucky0111.pettalk.domain.entity.chat;
 
 import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
 import org.springframework.data.annotation.CreatedDate;
 
 import java.time.LocalDateTime;
