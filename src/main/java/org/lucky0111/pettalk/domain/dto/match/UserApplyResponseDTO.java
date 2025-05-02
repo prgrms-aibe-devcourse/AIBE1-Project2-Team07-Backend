@@ -16,4 +16,4 @@ public record UserApplyResponseDTO(
         Status status,
         String createdAt,
         String updatedAt
-){ }
+){}
