@@ -1,11 +1,12 @@
-package org.lucky0111.pettalk.domain.entity;
+package org.lucky0111.pettalk.domain.entity.community;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
-
-import java.time.LocalDate;
+import org.lucky0111.pettalk.domain.entity.PetCategory;
+import org.lucky0111.pettalk.domain.entity.PetUser;
+import org.lucky0111.pettalk.domain.entity.PostCategory;
 
 @Getter
 @Entity

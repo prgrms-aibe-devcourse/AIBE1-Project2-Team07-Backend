@@ -2,10 +2,6 @@ package org.lucky0111.pettalk.domain.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
-
-import java.time.LocalDate;
 
 @Getter
 @Entity
