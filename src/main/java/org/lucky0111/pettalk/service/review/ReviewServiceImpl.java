@@ -78,17 +78,25 @@ public class ReviewServiceImpl implements ReviewService {
     public List<ReviewResponseDTO> getAllReviews() {
         UUID currentUserUUID = UUID.fromString("3fa85f64-5717-4562-b3fc-2c963f66afa6");
 
-        // 개선된 쿼리: fetch join을 사용하여 연관 엔티티를 한 번에 가져옴
         List<Review> reviews = reviewRepository.findAllWithRelations();
 
-        // 좋아요 카운트를 한 번에 조회
-        Map<Long, Integer> likeCounts = reviewLikeRepository.countByReviewIds(
-                reviews.stream().map(Review::getReviewId).collect(Collectors.toList()));
+        Map<Long, Integer> likeCounts = reviewLikeRepository.countLikesByReviewIds(
+                        reviews.stream().map(Review::getReviewId).collect(Collectors.toList()))
+                .stream()
+                .collect(Collectors.toMap(
+                        ReviewLikeRepository.ReviewLikeCountProjection::getReviewId,
+                        ReviewLikeRepository.ReviewLikeCountProjection::getLikeCount
+                ));
 
-        // 사용자의 좋아요 여부를 한 번에 조회
-        Map<Long, Boolean> userLikedMap = reviewLikeRepository.existsByReviewIdsAndUserId(
-                reviews.stream().map(Review::getReviewId).collect(Collectors.toList()),
-                currentUserUUID);
+// 사용자의 좋아요 여부를 한 번에 조회
+        Map<Long, Boolean> userLikedMap = reviewLikeRepository.checkUserLikeStatus(
+                        reviews.stream().map(Review::getReviewId).collect(Collectors.toList()),
+                        currentUserUUID)
+                .stream()
+                .collect(Collectors.toMap(
+                        ReviewLikeRepository.ReviewLikeStatusProjection::getReviewId,
+                        ReviewLikeRepository.ReviewLikeStatusProjection::getHasLiked
+                ));
 
         return reviews.stream()
                 .map(review -> convertToResponseDTO(

@@ -98,6 +98,7 @@ public class ReviewController {
     }
 
     // 리뷰에 좋아요 추가
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/{reviewId}/likes")
     public ResponseEntity<ReviewLikeResponseDTO> addLikeToReview(@PathVariable Long reviewId, HttpServletRequest request) {
         log.info("리뷰 좋아요 추가 요청: reviewId={}", reviewId);
@@ -106,6 +107,7 @@ public class ReviewController {
     }
 
     // 리뷰에 좋아요 삭제
+    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{reviewId}/likes")
     public ResponseEntity<Void> removeLikeFromReview(@PathVariable Long reviewId, HttpServletRequest request) {
         log.info("리뷰 좋아요 삭제 요청: reviewId={}", reviewId);
@@ -114,6 +116,7 @@ public class ReviewController {
     }
 
     // 리뷰의 좋아요 개수 조회
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/{reviewId}/likes/count")
     public ResponseEntity<ReviewLikeCountDTO> getReviewLikesCount(@PathVariable Long reviewId) {
         log.info("리뷰 좋아요 개수 조회 요청: reviewId={}", reviewId);
