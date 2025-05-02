@@ -6,6 +6,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
 
+
+import java.util.UUID;
+
+
 @Setter
 @Getter
 @Entity
@@ -14,8 +18,8 @@ import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
 public class PetUser extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-//    @Column(length = 36)
-    private String userId;
+
+    private UUID userId;
 
     private String name;
 

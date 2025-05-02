@@ -13,8 +13,8 @@ import java.time.LocalDate;
 @Table(name = "certifications")
 public class Certification extends BaseTimeEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String certId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long certId;
 
     @ManyToOne
     @JoinColumn(name = "trainer_id")
