@@ -22,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -51,7 +52,7 @@ public class AuthController {
             }
 
             // JWT 토큰에서 사용자 ID 추출
-            String userId = jwtUtil.getUserId(extractJwtToken(request));
+            UUID userId = jwtUtil.getUserId(extractJwtToken(request));
 
             if (userId == null) {
                 return responseService.createErrorResponse("INVALID_TOKEN", "유효하지 않은 토큰입니다.");
@@ -245,7 +246,7 @@ public class AuthController {
             }
 
             // JWT 토큰에서 사용자 ID 추출
-            String userId = jwtUtil.getUserId(extractJwtToken(request));
+            UUID userId = jwtUtil.getUserId(extractJwtToken(request));
 
             if (userId == null) {
                 return responseService.createErrorResponse("INVALID_TOKEN", "유효하지 않은 토큰입니다.");
@@ -280,7 +281,7 @@ public class AuthController {
             }
 
             // JWT 토큰에서 사용자 ID 추출
-            String userId = jwtUtil.getUserId(extractJwtToken(request));
+            UUID userId = jwtUtil.getUserId(extractJwtToken(request));
 
             if (userId == null) {
                 return responseService.createErrorResponse("INVALID_TOKEN", "유효하지 않은 토큰입니다.");

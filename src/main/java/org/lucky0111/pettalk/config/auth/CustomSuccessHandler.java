@@ -5,10 +5,12 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
 import org.lucky0111.pettalk.domain.dto.auth.OAuth2Response;
 import org.lucky0111.pettalk.domain.dto.auth.TokenDTO;
 import org.lucky0111.pettalk.domain.entity.PetUser;
+import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.lucky0111.pettalk.util.auth.JWTUtil;
 import org.lucky0111.pettalk.util.auth.OAuth2UserServiceHelper;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,11 +25,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Component
+@RequiredArgsConstructor
 public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JWTUtil jwtUtil;
     private final OAuth2UserServiceHelper oAuth2UserServiceHelper;
-    private final UserRepository userRepository;
+    private final PetUserRepository userRepository;
 
     @Value("${front.url}")
     private String frontUrl;
@@ -38,11 +41,6 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     @Value("${refresh.token.cookie.expiry:2592000}") // 30일(초)
     private int refreshTokenCookieExpiry;
 
-    public CustomSuccessHandler(JWTUtil jwtUtil, OAuth2UserServiceHelper oAuth2UserServiceHelper, UserRepository userRepository) {
-        this.jwtUtil = jwtUtil;
-        this.oAuth2UserServiceHelper = oAuth2UserServiceHelper;
-        this.userRepository = userRepository;
-    }
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {

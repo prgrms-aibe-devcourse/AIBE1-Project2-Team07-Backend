@@ -2,6 +2,7 @@ package org.lucky0111.pettalk.domain.entity.chat;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.lucky0111.pettalk.domain.entity.Chatroom;
 import org.springframework.data.annotation.CreatedDate;
 
 import java.time.LocalDateTime;

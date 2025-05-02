@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, String> {
 
@@ -18,7 +19,7 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Stri
 
     @Modifying
     @Query("UPDATE RefreshToken r SET r.revoked = true WHERE r.user.userId = :userId AND r.revoked = false")
-    void revokeAllByUser(String userId);
+    void revokeAllByUser(UUID userId);
 
     @Modifying
     @Query("DELETE FROM RefreshToken r WHERE r.expiryDate < :now")

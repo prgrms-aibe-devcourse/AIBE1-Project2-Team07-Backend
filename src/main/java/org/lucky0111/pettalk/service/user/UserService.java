@@ -1,23 +1,23 @@
 package org.lucky0111.pettalk.service.user;
 
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.lucky0111.pettalk.domain.dto.user.ProfileUpdateDTO;
 import org.lucky0111.pettalk.domain.entity.PetUser;
+import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
 
-    private final UserRepository userRepository;
-
-    public UserService(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
+    private final PetUserRepository userRepository;
 
     @Transactional
-    public boolean withdrawUser(String userId) {
+    public boolean withdrawUser(UUID userId) {
         Optional<PetUser> userOptional = userRepository.findById(userId);
 
         if (userOptional.isPresent()) {
@@ -32,7 +32,7 @@ public class UserService {
     }
 
     @Transactional
-    public PetUser updateProfile(String userId, ProfileUpdateDTO profileUpdateDTO) {
+    public PetUser updateProfile(UUID userId, ProfileUpdateDTO profileUpdateDTO) {
         Optional<PetUser> userOptional = userRepository.findById(userId);
 
         if (userOptional.isPresent()) {
