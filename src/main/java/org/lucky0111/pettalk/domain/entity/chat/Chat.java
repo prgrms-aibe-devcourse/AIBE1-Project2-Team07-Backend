@@ -1,14 +1,12 @@
-package org.lucky0111.pettalk.domain.entity;
+package org.lucky0111.pettalk.domain.entity.chat;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
+import lombok.Data;
 import org.springframework.data.annotation.CreatedDate;
 
 import java.time.LocalDateTime;
 
-@Getter
+@Data
 @Entity
 @Table(name = "chats")
 public class Chat {
@@ -20,8 +18,11 @@ public class Chat {
     @JoinColumn(name = "chatroom_id")
     private Chatroom chatroom;
 
+    @Column(length = 200, nullable = false)
     private String content;
+    @Column(nullable = false)
     private String sender;
+    @Column(nullable = false)
     private String receiver;
 
     @CreatedDate

@@ -5,10 +5,10 @@ import lombok.Getter;
 
 @Getter
 @Entity
-@Table(name = "post_tags", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"tag_id", "post_id"})
+@Table(name = "trainer_tags", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"tag_id", "trainer_id"})
 })
-public class PostTag {
+public class TrainerTagRelation {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -18,6 +18,6 @@ public class PostTag {
     private Tag tag;
 
     @ManyToOne
-    @JoinColumn(name = "post_id")
-    private Post post;
+    @JoinColumn(name = "trainer_id")
+    private Trainer trainer;
 }
