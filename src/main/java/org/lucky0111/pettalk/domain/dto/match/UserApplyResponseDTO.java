@@ -12,7 +12,6 @@ public record UserApplyResponseDTO(
         String trainerName,
         String content,
         String imageUrl,
-        String videoUrl,
         Status status,
         String createdAt,
         String updatedAt

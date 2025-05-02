@@ -35,8 +35,6 @@ public class UserApply extends BaseTimeEntity {
 
     private String imageUrl;
 
-    private String videoUrl;
-
     @Column(nullable = false)
     private Status status;
 }

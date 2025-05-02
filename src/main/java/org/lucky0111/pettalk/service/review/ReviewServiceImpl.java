@@ -1,6 +1,7 @@
 package org.lucky0111.pettalk.service.review;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.Status;
@@ -13,6 +14,7 @@ import org.lucky0111.pettalk.repository.match.UserApplyRepository;
 import org.lucky0111.pettalk.repository.review.ReviewLikeRepository;
 import org.lucky0111.pettalk.repository.review.ReviewRepository;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
+import org.lucky0111.pettalk.util.auth.JWTUtil;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -33,25 +35,13 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewLikeRepository reviewLikeRepository;
     private final UserApplyRepository userApplyRepository;
     private final PetUserRepository petUserRepository;
-
-    // 현재 인증된 사용자의 UUID 가져오기
-    private UUID getCurrentUserUUID() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return UUID.fromString(authentication.getName());
-    }
-
-    // 현재 사용자 엔티티 가져오기
-    private PetUser getCurrentUser() {
-        UUID currentUserUUID = getCurrentUserUUID();
-        return petUserRepository.findById(currentUserUUID)
-                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
-    }
+    private final JWTUtil jwtUtil;
 
     @Override
     @Transactional
-    public ReviewResponseDTO createReview(ReviewRequestDTO requestDTO) throws AccessDeniedException {
-        UUID currentUserUUID = getCurrentUserUUID();
-        PetUser currentUser = getCurrentUser();
+    public ReviewResponseDTO createReview(ReviewRequestDTO requestDTO,HttpServletRequest request) throws AccessDeniedException {
+        UUID currentUserUUID = getCurrentUserUUID(request);
+        PetUser currentUser = getCurrentUser(request);
 
         // 신청서 조회
         UserApply userApply = userApplyRepository.findById(requestDTO.applyId())
@@ -88,17 +78,25 @@ public class ReviewServiceImpl implements ReviewService {
     public List<ReviewResponseDTO> getAllReviews() {
         UUID currentUserUUID = UUID.fromString("3fa85f64-5717-4562-b3fc-2c963f66afa6");
 
-        // 개선된 쿼리: fetch join을 사용하여 연관 엔티티를 한 번에 가져옴
         List<Review> reviews = reviewRepository.findAllWithRelations();
 
-        // 좋아요 카운트를 한 번에 조회
-        Map<Long, Integer> likeCounts = reviewLikeRepository.countByReviewIds(
-                reviews.stream().map(Review::getReviewId).collect(Collectors.toList()));
+        Map<Long, Integer> likeCounts = reviewLikeRepository.countLikesByReviewIds(
+                        reviews.stream().map(Review::getReviewId).collect(Collectors.toList()))
+                .stream()
+                .collect(Collectors.toMap(
+                        ReviewLikeRepository.ReviewLikeCountProjection::getReviewId,
+                        ReviewLikeRepository.ReviewLikeCountProjection::getLikeCount
+                ));
 
-        // 사용자의 좋아요 여부를 한 번에 조회
-        Map<Long, Boolean> userLikedMap = reviewLikeRepository.existsByReviewIdsAndUserId(
-                reviews.stream().map(Review::getReviewId).collect(Collectors.toList()),
-                currentUserUUID);
+// 사용자의 좋아요 여부를 한 번에 조회
+        Map<Long, Boolean> userLikedMap = reviewLikeRepository.checkUserLikeStatus(
+                        reviews.stream().map(Review::getReviewId).collect(Collectors.toList()),
+                        currentUserUUID)
+                .stream()
+                .collect(Collectors.toMap(
+                        ReviewLikeRepository.ReviewLikeStatusProjection::getReviewId,
+                        ReviewLikeRepository.ReviewLikeStatusProjection::getHasLiked
+                ));
 
         return reviews.stream()
                 .map(review -> convertToResponseDTO(
@@ -111,8 +109,8 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public ReviewResponseDTO getReviewById(Long reviewId) {
-        UUID currentUserUUID = getCurrentUserUUID();
+    public ReviewResponseDTO getReviewById(Long reviewId, HttpServletRequest request) {
+        UUID currentUserUUID = getCurrentUserUUID(request);
         Review review = reviewRepository.findByIdWithRelations(reviewId)
                 .orElseThrow(() -> new EntityNotFoundException("리뷰를 찾을 수 없습니다."));
 
@@ -121,8 +119,8 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
-    public ReviewResponseDTO updateReview(Long reviewId, ReviewUpdateDTO updateDTO) throws AccessDeniedException {
-        UUID currentUserUUID = getCurrentUserUUID();
+    public ReviewResponseDTO updateReview(Long reviewId, ReviewUpdateDTO updateDTO, HttpServletRequest request) throws AccessDeniedException {
+        UUID currentUserUUID = getCurrentUserUUID(request);
 
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new EntityNotFoundException("리뷰를 찾을 수 없습니다."));
@@ -151,8 +149,8 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Transactional
-    public void deleteReview(Long reviewId) throws AccessDeniedException {
-        UUID currentUserUUID = getCurrentUserUUID();
+    public void deleteReview(Long reviewId, HttpServletRequest request) throws AccessDeniedException {
+        UUID currentUserUUID = getCurrentUserUUID(request);
 
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new EntityNotFoundException("리뷰를 찾을 수 없습니다."));
@@ -167,8 +165,8 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReviewResponseDTO> getReviewsByTrainerId(UUID trainerId) {
-        UUID currentUserUUID = getCurrentUserUUID();
+    public List<ReviewResponseDTO> getReviewsByTrainerId(UUID trainerId, HttpServletRequest request) {
+        UUID currentUserUUID = getCurrentUserUUID(request);
         List<Review> reviews = reviewRepository.findByUserApply_Trainer_TrainerId(trainerId);
 
         return reviews.stream()
@@ -178,8 +176,14 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReviewResponseDTO> getMyReviews() {
-        UUID currentUserUUID = getCurrentUserUUID();
+    public List<ReviewResponseDTO> getMyReviews(HttpServletRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+
+        System.out.println("username = " + username);
+
+        UUID currentUserUUID = getCurrentUserUUID(request);
+        System.out.println("currentUserUUID = " + currentUserUUID);
         List<Review> reviews = reviewRepository.findByUserApply_PetUser_UserId(currentUserUUID);
 
         return reviews.stream()
@@ -189,9 +193,9 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
-    public ReviewLikeResponseDTO addLikeToReview(Long reviewId) {
-        UUID currentUserUUID = getCurrentUserUUID();
-        PetUser currentUser = getCurrentUser();
+    public ReviewLikeResponseDTO addLikeToReview(Long reviewId, HttpServletRequest request) {
+        UUID currentUserUUID = getCurrentUserUUID(request);
+        PetUser currentUser = getCurrentUser(request);
 
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new EntityNotFoundException("리뷰를 찾을 수 없습니다."));
@@ -221,9 +225,9 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
-    public void removeLikeFromReview(Long reviewId) {
-        UUID currentUserUUID = getCurrentUserUUID();
-        PetUser currentUser = getCurrentUser();
+    public void removeLikeFromReview(Long reviewId, HttpServletRequest request) {
+        UUID currentUserUUID = getCurrentUserUUID(request);
+        PetUser currentUser = getCurrentUser(request);
 
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new EntityNotFoundException("리뷰를 찾을 수 없습니다."));
@@ -285,4 +289,32 @@ public class ReviewServiceImpl implements ReviewService {
                 updatedAt
         );
     }
+
+    private String extractJwtToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        System.out.println("bearerToken = " + bearerToken);
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+
+            return bearerToken.substring(7);
+        }
+        return null;
+    }
+
+    // 현재 인증된 사용자의 UUID 가져오기
+    private UUID getCurrentUserUUID(HttpServletRequest request) {
+        String token = extractJwtToken(request);
+        if (token == null) {
+            throw new RuntimeException("인증 토큰을 찾을 수 없습니다.");
+        }
+        return jwtUtil.getUserId(token);
+    }
+
+    // 현재 사용자 엔티티 가져오기
+    private PetUser getCurrentUser(HttpServletRequest request) {
+        UUID currentUserUUID = getCurrentUserUUID(request);
+        return petUserRepository.findById(currentUserUUID)
+                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
+    }
+
+
 }
