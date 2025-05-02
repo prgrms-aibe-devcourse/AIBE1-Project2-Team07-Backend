@@ -41,7 +41,7 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
-    public ReviewResponseDTO createReview(ReviewRequestDTO requestDTO,HttpServletRequest request) throws AccessDeniedException {
+    public ReviewResponseDTO createReview(ReviewRequestDTO requestDTO,HttpServletRequest request) {
         UUID currentUserUUID = getCurrentUserUUID(request);
         PetUser currentUser = getCurrentUser(request);
 
@@ -121,7 +121,7 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
-    public ReviewResponseDTO updateReview(Long reviewId, ReviewUpdateDTO updateDTO, HttpServletRequest request) throws AccessDeniedException {
+    public ReviewResponseDTO updateReview(Long reviewId, ReviewUpdateDTO updateDTO, HttpServletRequest request) {
         UUID currentUserUUID = getCurrentUserUUID(request);
 
         Review review = reviewRepository.findById(reviewId)
@@ -129,7 +129,7 @@ public class ReviewServiceImpl implements ReviewService {
 
         // 리뷰 작성자 확인
         if (!review.getUserApply().getPetUser().getUserId().equals(currentUserUUID)) {
-            throw new AccessDeniedException("리뷰를 수정할 권한이 없습니다.");
+            throw new CustomException("리뷰를 수정할 권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
 
         // 리뷰 업데이트
@@ -151,7 +151,7 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Transactional
-    public void deleteReview(Long reviewId, HttpServletRequest request) throws AccessDeniedException {
+    public void deleteReview(Long reviewId, HttpServletRequest request) {
         UUID currentUserUUID = getCurrentUserUUID(request);
 
         Review review = reviewRepository.findById(reviewId)

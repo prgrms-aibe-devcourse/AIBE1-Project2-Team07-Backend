@@ -12,7 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.nio.file.AccessDeniedException;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,7 +33,7 @@ public class ReviewController {
     // 리뷰 작성
     @PostMapping
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<ReviewResponseDTO> createReview(@RequestBody ReviewRequestDTO requestDTO, HttpServletRequest request) throws AccessDeniedException {
+    public ResponseEntity<ReviewResponseDTO> createReview(@RequestBody ReviewRequestDTO requestDTO, HttpServletRequest request){
         log.info("리뷰 작성 요청: {}", requestDTO);
         ReviewResponseDTO responseDTO = reviewService.createReview(requestDTO, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
@@ -64,7 +63,7 @@ public class ReviewController {
     public ResponseEntity<ReviewResponseDTO> updateReview(
             @PathVariable Long reviewId,
             @RequestBody ReviewUpdateDTO updateDTO,
-            HttpServletRequest request) throws AccessDeniedException {
+            HttpServletRequest request) {
         log.info("리뷰 수정 요청: reviewId={}, updateDTO={}", reviewId, updateDTO);
         ReviewResponseDTO responseDTO = reviewService.updateReview(reviewId, updateDTO, request);
         return ResponseEntity.ok(responseDTO);
@@ -73,7 +72,7 @@ public class ReviewController {
     // 리뷰 삭제
     @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{reviewId}")
-    public ResponseEntity<Void> deleteReview(@PathVariable Long reviewId, HttpServletRequest request) throws AccessDeniedException {
+    public ResponseEntity<Void> deleteReview(@PathVariable Long reviewId, HttpServletRequest request) {
         log.info("리뷰 삭제 요청: reviewId={}", reviewId);
         reviewService.deleteReview(reviewId, request);
         return ResponseEntity.noContent().build();

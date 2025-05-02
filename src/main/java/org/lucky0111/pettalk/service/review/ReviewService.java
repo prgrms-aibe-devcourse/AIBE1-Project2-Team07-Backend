@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public interface ReviewService {
     // 리뷰 작성
-    ReviewResponseDTO createReview(ReviewRequestDTO requestDTO, HttpServletRequest request) throws AccessDeniedException;
+    ReviewResponseDTO createReview(ReviewRequestDTO requestDTO, HttpServletRequest request);
 
     // 리뷰 목록 조회
     List<ReviewResponseDTO> getAllReviews();
@@ -18,10 +18,10 @@ public interface ReviewService {
     ReviewResponseDTO getReviewById(Long reviewId, HttpServletRequest request);
 
     // 리뷰 수정
-    ReviewResponseDTO updateReview(Long reviewId, ReviewUpdateDTO updateDTO, HttpServletRequest request) throws AccessDeniedException;
+    ReviewResponseDTO updateReview(Long reviewId, ReviewUpdateDTO updateDTO, HttpServletRequest request);
 
     // 리뷰 삭제
-    void deleteReview(Long reviewId, HttpServletRequest request) throws AccessDeniedException;
+    void deleteReview(Long reviewId, HttpServletRequest request);
 
     // 훈련사 별 리뷰 목록 조회
     List<ReviewResponseDTO> getReviewsByTrainerId(UUID trainerId, HttpServletRequest request);
