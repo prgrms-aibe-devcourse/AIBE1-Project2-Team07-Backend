@@ -16,13 +16,9 @@ import org.lucky0111.pettalk.repository.trainer.TrainerRepository;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.lucky0111.pettalk.util.auth.JWTUtil;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.file.AccessDeniedException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
@@ -148,7 +144,7 @@ public class UserApplyServiceImpl implements UserApplyService {
         );
     }
 
-    public UserApplyResponseDTO deleteApply(Long applyId, HttpServletRequest request) throws AccessDeniedException {
+    public UserApplyResponseDTO deleteApply(Long applyId, HttpServletRequest request) {
         UUID currentUserUUID = getCurrentUserUUID(request);
         PetUser currentUser = getCurrentUser(request);
 

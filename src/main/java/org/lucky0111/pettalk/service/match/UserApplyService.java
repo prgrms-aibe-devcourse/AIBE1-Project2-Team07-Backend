@@ -21,5 +21,5 @@ public interface UserApplyService {
 
     UserApplyResponseDTO convertToResponseDTO(UserApply userApply);
 
-    UserApplyResponseDTO deleteApply(Long applyId,HttpServletRequest request) throws AccessDeniedException;
+    UserApplyResponseDTO deleteApply(Long applyId,HttpServletRequest request);
 }

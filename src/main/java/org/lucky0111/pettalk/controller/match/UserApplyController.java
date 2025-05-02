@@ -89,7 +89,7 @@ public class UserApplyController {
     @DeleteMapping("/{applyId}/delete")
     public ResponseEntity<UserApplyResponseDTO> deleteApply(
             @PathVariable Long applyId,
-            HttpServletRequest request) throws AccessDeniedException {
+            HttpServletRequest request) {
 
         log.info("신청 삭제 요청: applyId={}", applyId);
 
