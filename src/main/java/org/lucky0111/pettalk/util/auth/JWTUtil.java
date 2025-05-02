@@ -61,9 +61,9 @@ public class JWTUtil {
     }
 
     public UUID getUserId(String token) {
-        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload()
-                .get("userId", UUID.class);
-
+        String userIdStr = Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload()
+                .get("userId", String.class);
+        return UUID.fromString(userIdStr);
     }
 
     public String getEmail(String token) {

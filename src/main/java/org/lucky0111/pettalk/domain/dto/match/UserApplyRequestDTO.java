@@ -5,7 +5,6 @@ import java.util.UUID;
 public record UserApplyRequestDTO(
         UUID trainerId,
         String content,
-        String imageUrl,
-        String videoUrl
+        String imageUrl
 ) {
 }
