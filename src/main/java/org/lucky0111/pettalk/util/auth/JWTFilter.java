@@ -16,6 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 public class JWTFilter extends OncePerRequestFilter {
 
@@ -70,7 +71,7 @@ public class JWTFilter extends OncePerRequestFilter {
         String provider = jwtUtil.getProvider(token);
         String socialId = jwtUtil.getSocialId(token);
         String role = jwtUtil.getRole(token);
-        String userId = jwtUtil.getUserId(token);
+        UUID userId = jwtUtil.getUserId(token);
         String email = jwtUtil.getEmail(token);
 
         //userDTO를 생성하여 값 set

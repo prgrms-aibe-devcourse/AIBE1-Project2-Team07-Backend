@@ -8,6 +8,7 @@ import org.lucky0111.pettalk.domain.dto.auth.TokenDTO;
 import org.lucky0111.pettalk.domain.entity.PetUser;
 import org.lucky0111.pettalk.domain.entity.RefreshToken;
 import org.lucky0111.pettalk.repository.auth.RefreshTokenRepository;
+import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -20,12 +21,13 @@ import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
 public class JWTUtil {
 
     private final SecretKey secretKey;
-    private final UserRepository userRepository;
+    private final PetUserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
 
     @Value("${spring.jwt.access-token-expiration-ms:3600000}")
@@ -35,7 +37,7 @@ public class JWTUtil {
     private Integer refreshTokenExpirationDays; // Default 30 days
 
     public JWTUtil(@Value("${spring.jwt.secret}") String secret,
-                   UserRepository userRepository,
+                   PetUserRepository userRepository,
                    RefreshTokenRepository refreshTokenRepository) {
         this.secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8),
                 Jwts.SIG.HS256.key().build().getAlgorithm());
@@ -58,9 +60,10 @@ public class JWTUtil {
                 .get("role", String.class);
     }
 
-    public String getUserId(String token) {
+    public UUID getUserId(String token) {
         return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload()
-                .get("userId", String.class);
+                .get("userId", UUID.class);
+
     }
 
     public String getEmail(String token) {
@@ -94,7 +97,7 @@ public class JWTUtil {
         }
     }
 
-    public String createJwt(String provider, String socialId, String userId, String role, Long expiredMs) {
+    public String createJwt(String provider, String socialId, UUID userId, String role, Long expiredMs) {
         System.out.println("JWT 토큰 생성 - 사용자: " + provider + " " + socialId + ", 역할: " + role);
         try {
             String token = Jwts.builder()
@@ -115,7 +118,7 @@ public class JWTUtil {
         }
     }
 
-    public String createJwtWithEmail(String provider, String socialId, String userId, String role, String email, Long expiredMs) {
+    public String createJwtWithEmail(String provider, String socialId, UUID userId, String role, String email, Long expiredMs) {
         System.out.println("JWT 토큰 생성 - 사용자: " + provider + " " + socialId + ", 역할: " + role + ", 이메일: " + email);
         try {
             String token = Jwts.builder()
@@ -276,7 +279,7 @@ public class JWTUtil {
 
     // Revoke all refresh tokens for a user
     @Transactional
-    public void revokeAllUserTokens(String userId) {
+    public void revokeAllUserTokens(UUID userId) {
         refreshTokenRepository.revokeAllByUser(userId);
     }
 
