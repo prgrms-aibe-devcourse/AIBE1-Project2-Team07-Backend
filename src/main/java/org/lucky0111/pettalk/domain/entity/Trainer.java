@@ -14,7 +14,7 @@ import java.util.UUID;
 @NoArgsConstructor
 public class Trainer extends BaseTimeEntity {
     @Id
-    private UUID trainerId;
+    private UUID trainerId; // FK -> PetUser.userId
 
     @OneToOne
     @MapsId
@@ -24,7 +24,6 @@ public class Trainer extends BaseTimeEntity {
     @Column(length = 1000)
     private String introduction;
     private Integer experienceYears;
-
     private LocalDateTime approvedAt;
 }
 

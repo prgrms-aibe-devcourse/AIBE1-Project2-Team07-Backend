@@ -8,7 +8,6 @@ import org.lucky0111.pettalk.domain.dto.auth.TokenDTO;
 import org.lucky0111.pettalk.domain.entity.PetUser;
 import org.lucky0111.pettalk.domain.entity.RefreshToken;
 import org.lucky0111.pettalk.repository.auth.RefreshTokenRepository;
-import org.lucky0111.pettalk.repository.user.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
