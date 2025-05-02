@@ -10,11 +10,13 @@ import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.domain.entity.match.UserApply;
 import org.lucky0111.pettalk.domain.entity.review.Review;
 import org.lucky0111.pettalk.domain.entity.review.ReviewLike;
+import org.lucky0111.pettalk.exception.CustomException;
 import org.lucky0111.pettalk.repository.match.UserApplyRepository;
 import org.lucky0111.pettalk.repository.review.ReviewLikeRepository;
 import org.lucky0111.pettalk.repository.review.ReviewRepository;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.lucky0111.pettalk.util.auth.JWTUtil;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -45,20 +47,20 @@ public class ReviewServiceImpl implements ReviewService {
 
         // 신청서 조회
         UserApply userApply = userApplyRepository.findById(requestDTO.applyId())
-                .orElseThrow(() -> new EntityNotFoundException("해당 신청서를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException("해당 신청서를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
         // 신청서 작성자 확인
         if (!userApply.getPetUser().getUserId().equals(currentUserUUID)) {
-            throw new AccessDeniedException("리뷰를 작성할 권한이 없습니다.");
+            throw new CustomException("리뷰를 작성할 권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
 
         if (userApply.getStatus() != Status.APPROVED) {
-            throw new IllegalStateException("승인된 신청에 대해서만 리뷰를 작성할 수 있습니다.");
+            throw new CustomException("승인된 신청에 대해서만 리뷰를 작성할 수 있습니다.", HttpStatus.BAD_REQUEST);
         }
 
         // 이미 리뷰가 존재하는지 확인
         if (reviewRepository.existsByUserApply(userApply)) {
-            throw new IllegalStateException("이미 리뷰가 존재합니다.");
+            throw new CustomException("이미 리뷰가 존재합니다.", HttpStatus.CONFLICT);
         }
 
         // 리뷰 생성
@@ -112,7 +114,7 @@ public class ReviewServiceImpl implements ReviewService {
     public ReviewResponseDTO getReviewById(Long reviewId, HttpServletRequest request) {
         UUID currentUserUUID = getCurrentUserUUID(request);
         Review review = reviewRepository.findByIdWithRelations(reviewId)
-                .orElseThrow(() -> new EntityNotFoundException("리뷰를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException("리뷰를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
         return convertToResponseDTO(review, currentUserUUID);
     }
@@ -123,7 +125,7 @@ public class ReviewServiceImpl implements ReviewService {
         UUID currentUserUUID = getCurrentUserUUID(request);
 
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new EntityNotFoundException("리뷰를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException("리뷰를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
         // 리뷰 작성자 확인
         if (!review.getUserApply().getPetUser().getUserId().equals(currentUserUUID)) {
@@ -153,11 +155,11 @@ public class ReviewServiceImpl implements ReviewService {
         UUID currentUserUUID = getCurrentUserUUID(request);
 
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new EntityNotFoundException("리뷰를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException("리뷰를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
         // 리뷰 작성자 확인
         if (!review.getUserApply().getPetUser().getUserId().equals(currentUserUUID)) {
-            throw new AccessDeniedException("리뷰를 삭제할 권한이 없습니다.");
+            throw new CustomException("리뷰를 삭제할 권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
 
         reviewRepository.delete(review);
@@ -198,11 +200,11 @@ public class ReviewServiceImpl implements ReviewService {
         PetUser currentUser = getCurrentUser(request);
 
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new EntityNotFoundException("리뷰를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException("리뷰를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
         // 이미 좋아요가 있는지 확인
         if (reviewLikeRepository.existsByReviewAndUser(review, currentUser)) {
-            throw new IllegalStateException("이미 좋아요를 누르셨습니다.");
+            throw new CustomException("이미 좋아요를 누르셨습니다.", HttpStatus.CONFLICT);
         }
 
         // 좋아요 생성
@@ -230,11 +232,11 @@ public class ReviewServiceImpl implements ReviewService {
         PetUser currentUser = getCurrentUser(request);
 
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new EntityNotFoundException("리뷰를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException("리뷰를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
         // 좋아요 확인 및 삭제
         ReviewLike reviewLike = reviewLikeRepository.findByReviewAndUser(review, currentUser)
-                .orElseThrow(() -> new IllegalStateException("좋아요를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException("좋아요를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
         reviewLikeRepository.delete(reviewLike);
     }
@@ -304,7 +306,7 @@ public class ReviewServiceImpl implements ReviewService {
     private UUID getCurrentUserUUID(HttpServletRequest request) {
         String token = extractJwtToken(request);
         if (token == null) {
-            throw new RuntimeException("인증 토큰을 찾을 수 없습니다.");
+            throw new CustomException("인증 토큰을 찾을 수 없습니다.", HttpStatus.UNAUTHORIZED);
         }
         return jwtUtil.getUserId(token);
     }
@@ -313,7 +315,7 @@ public class ReviewServiceImpl implements ReviewService {
     private PetUser getCurrentUser(HttpServletRequest request) {
         UUID currentUserUUID = getCurrentUserUUID(request);
         return petUserRepository.findById(currentUserUUID)
-                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
     }
 
 
