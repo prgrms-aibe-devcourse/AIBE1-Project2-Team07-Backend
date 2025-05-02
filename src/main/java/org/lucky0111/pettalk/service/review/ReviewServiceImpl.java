@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.Status;
 import org.lucky0111.pettalk.domain.dto.review.*;
-import org.lucky0111.pettalk.domain.entity.PetUser;
+import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.domain.entity.match.UserApply;
 import org.lucky0111.pettalk.domain.entity.review.Review;
 import org.lucky0111.pettalk.domain.entity.review.ReviewLike;

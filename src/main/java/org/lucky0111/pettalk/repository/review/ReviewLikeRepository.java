@@ -1,6 +1,6 @@
 package org.lucky0111.pettalk.repository.review;
 
-import org.lucky0111.pettalk.domain.entity.PetUser;
+import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.domain.entity.review.Review;
 import org.lucky0111.pettalk.domain.entity.review.ReviewLike;
 import org.springframework.data.jpa.repository.JpaRepository;

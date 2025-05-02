@@ -1,9 +1,10 @@
-package org.lucky0111.pettalk.domain.entity;
+package org.lucky0111.pettalk.domain.entity.trainer;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
+import org.lucky0111.pettalk.domain.entity.user.PetUser;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

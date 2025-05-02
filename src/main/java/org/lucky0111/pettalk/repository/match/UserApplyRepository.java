@@ -1,8 +1,8 @@
 package org.lucky0111.pettalk.repository.match;
 
 import org.lucky0111.pettalk.domain.common.Status;
-import org.lucky0111.pettalk.domain.entity.PetUser;
-import org.lucky0111.pettalk.domain.entity.Trainer;
+import org.lucky0111.pettalk.domain.entity.user.PetUser;
+import org.lucky0111.pettalk.domain.entity.trainer.Trainer;
 import org.lucky0111.pettalk.domain.entity.match.UserApply;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
+import org.lucky0111.pettalk.domain.entity.user.PetUser;
 
 import java.util.UUID;
 

@@ -6,7 +6,7 @@ import org.lucky0111.pettalk.domain.dto.auth.TokenDTO;
 import org.lucky0111.pettalk.domain.dto.auth.TokenRequest;
 import org.lucky0111.pettalk.domain.dto.auth.UserRegistrationDTO;
 import org.lucky0111.pettalk.domain.dto.user.ProfileUpdateDTO;
-import org.lucky0111.pettalk.domain.entity.PetUser;
+import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.lucky0111.pettalk.service.auth.ResponseService;
 import org.lucky0111.pettalk.service.user.UserService;

@@ -1,6 +1,6 @@
 package org.lucky0111.pettalk.handler;
 
-import org.lucky0111.pettalk.domain.dto.ErrorResponseDTO;
+import org.lucky0111.pettalk.domain.dto.error.ErrorResponseDTO;
 import org.lucky0111.pettalk.exception.CustomException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;

@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
 import org.lucky0111.pettalk.domain.dto.auth.OAuth2Response;
 import org.lucky0111.pettalk.domain.dto.auth.TokenDTO;
-import org.lucky0111.pettalk.domain.entity.PetUser;
+import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.lucky0111.pettalk.util.auth.JWTUtil;
 import org.lucky0111.pettalk.util.auth.OAuth2UserServiceHelper;

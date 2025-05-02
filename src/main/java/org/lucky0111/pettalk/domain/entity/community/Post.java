@@ -4,9 +4,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
-import org.lucky0111.pettalk.domain.entity.PetCategory;
-import org.lucky0111.pettalk.domain.entity.PetUser;
-import org.lucky0111.pettalk.domain.entity.PostCategory;
+import org.lucky0111.pettalk.domain.entity.common.PetCategory;
+import org.lucky0111.pettalk.domain.entity.user.PetUser;
+import org.lucky0111.pettalk.domain.entity.common.PostCategory;
 
 @Getter
 @Entity

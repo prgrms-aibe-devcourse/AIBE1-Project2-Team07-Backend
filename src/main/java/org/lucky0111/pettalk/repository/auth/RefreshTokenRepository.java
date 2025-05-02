@@ -1,7 +1,7 @@
 package org.lucky0111.pettalk.repository.auth;
 
-import org.lucky0111.pettalk.domain.entity.PetUser;
-import org.lucky0111.pettalk.domain.entity.RefreshToken;
+import org.lucky0111.pettalk.domain.entity.user.PetUser;
+import org.lucky0111.pettalk.domain.entity.auth.RefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

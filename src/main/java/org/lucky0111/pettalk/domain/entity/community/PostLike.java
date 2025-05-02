@@ -2,7 +2,7 @@ package org.lucky0111.pettalk.domain.entity.community;
 
 import jakarta.persistence.*;
 import lombok.Getter;
-import org.lucky0111.pettalk.domain.entity.PetUser;
+import org.lucky0111.pettalk.domain.entity.user.PetUser;
 
 @Getter
 @Entity
