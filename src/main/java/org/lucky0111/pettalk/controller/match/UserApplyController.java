@@ -1,8 +1,10 @@
 package org.lucky0111.pettalk.controller.match;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +25,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/match")
 @RequiredArgsConstructor
+@Tag(name = "매칭 신청", description = "사용자와 트레이너 간의 매칭 신청 관련 API")
 @SecurityScheme(
         name = "bearerAuth",
         type = SecuritySchemeType.HTTP,
@@ -34,8 +37,13 @@ public class UserApplyController {
 
     private final UserApplyService userApplyService;
 
-    // 신청서 제출 API
+
     @PostMapping
+    @Operation(
+            summary = "매칭 신청서 제출",
+            description = "사용자가 트레이너에게 매칭 신청서를 제출합니다.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<UserApplyResponseDTO> createApply(@RequestBody UserApplyRequestDTO requestDTO, HttpServletRequest request) {
         log.info("신청서 제출 요청: {}", requestDTO);
@@ -43,7 +51,11 @@ public class UserApplyController {
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
 
-    // 사용자 본인의 신청 목록 조회 API
+    @Operation(
+            summary = "사용자 신청 목록 조회",
+            description = "로그인한 사용자가 자신이 제출한 매칭 신청 목록을 조회합니다.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/user")
     public ResponseEntity<List<UserApplyResponseDTO>> getUserApplies(HttpServletRequest request) {
@@ -52,7 +64,11 @@ public class UserApplyController {
         return ResponseEntity.ok(responseDTOs);
     }
 
-    // 트레이너에게 온 신청 목록 조회 API
+    @Operation(
+            summary = "트레이너 신청 목록 조회",
+            description = "트레이너가 자신에게 접수된 매칭 신청 목록을 조회합니다. 트레이너 또는 관리자 권한이 필요합니다.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/trainer")
     @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
@@ -62,7 +78,11 @@ public class UserApplyController {
         return ResponseEntity.ok(responseDTOs);
     }
 
-    // 신청 상태 업데이트 API (트레이너만 가능)
+    @Operation(
+            summary = "매칭 신청 상태 업데이트",
+            description = "트레이너가 매칭 신청의 상태를 업데이트합니다(승인/거절 등). 트레이너 또는 관리자 권한이 필요합니다.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
     @SecurityRequirement(name = "bearerAuth")
     @PatchMapping("/{applyId}/status")
     @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
@@ -84,7 +104,11 @@ public class UserApplyController {
         return ResponseEntity.ok(responseDTO);
     }
 
-    // 신청 삭제 업데이트 API (유저만 가능)
+    @Operation(
+            summary = "매칭 신청 삭제",
+            description = "사용자가 자신이 제출한 매칭 신청을 삭제합니다.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
     @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{applyId}/delete")
     public ResponseEntity<UserApplyResponseDTO> deleteApply(
