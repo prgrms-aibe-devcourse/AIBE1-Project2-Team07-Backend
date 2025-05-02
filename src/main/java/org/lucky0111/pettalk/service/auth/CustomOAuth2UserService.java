@@ -7,7 +7,6 @@ import org.lucky0111.pettalk.domain.dto.auth.NaverResponse;
 import org.lucky0111.pettalk.domain.dto.auth.OAuth2Response;
 import org.lucky0111.pettalk.domain.dto.user.UserDTO;
 import org.lucky0111.pettalk.domain.entity.PetUser;
-import org.lucky0111.pettalk.repository.user.UserRepository;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;

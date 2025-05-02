@@ -9,21 +9,17 @@ import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
 import org.lucky0111.pettalk.domain.dto.auth.OAuth2Response;
 import org.lucky0111.pettalk.domain.dto.auth.TokenDTO;
 import org.lucky0111.pettalk.domain.entity.PetUser;
-import org.lucky0111.pettalk.repository.user.UserRepository;
 import org.lucky0111.pettalk.util.auth.JWTUtil;
 import org.lucky0111.pettalk.util.auth.OAuth2UserServiceHelper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 @Component

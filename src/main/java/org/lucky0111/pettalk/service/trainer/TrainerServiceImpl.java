@@ -5,7 +5,12 @@ import org.lucky0111.pettalk.domain.dto.trainer.CertificationDTO;
 import org.lucky0111.pettalk.domain.dto.trainer.TrainerDTO;
 import org.lucky0111.pettalk.domain.entity.*;
 import org.lucky0111.pettalk.exception.CustomException;
-import org.lucky0111.pettalk.repository.*;
+import org.lucky0111.pettalk.repository.common.TagRepository;
+import org.lucky0111.pettalk.repository.review.ReviewRepository;
+import org.lucky0111.pettalk.repository.trainer.CertificationRepository;
+import org.lucky0111.pettalk.repository.trainer.TrainerRepository;
+import org.lucky0111.pettalk.repository.trainer.TrainerTagRepository;
+import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -27,7 +32,7 @@ public class TrainerServiceImpl implements TrainerService {
     public TrainerDTO getTrainerDetails(UUID trainerId) { // 인자 타입 UUID
         // 1. Trainer 엔티티 조회 (ID는 UUID)
         Trainer trainer = trainerRepository.findById(trainerId)
-                .orElseThrow(() -> new CustomException("Trainer not found with id: ".formatted(trainerId), HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new CustomException("Trainer not found with id: %s".formatted(trainerId), HttpStatus.NOT_FOUND));
 
         // 2. 연관된 PetUser 엔티티 조회 (Trainer 엔티티에 User user 필드가 있고 @OneToOne 관계로 매핑되었다고 가정)
         PetUser user = trainer.getUser();
@@ -39,9 +44,9 @@ public class TrainerServiceImpl implements TrainerService {
                 .toList();
 
         // 4. 전문 분야(태그) 목록 조회 (Trainer ID는 UUID)
-        List<TrainerTag> trainerTags = trainerTagRepository.findByTrainer_TrainerId(trainerId);
+        List<TrainerTagRelation> trainerTags = trainerTagRepository.findByTrainer_TrainerId(trainerId);
         List<String> specializationNames = trainerTags.stream()
-                .map(TrainerTag::getTag) // TrainerTag 엔티티에서 Tag 엔티티를 가져옴 (관계 매핑 필요)
+                .map(TrainerTagRelation::getTag) // TrainerTag 엔티티에서 Tag 엔티티를 가져옴 (관계 매핑 필요)
                 .map(Tag::getTagName) // Tag 엔티티에서 태그 이름을 가져옴
                 .toList();
 

@@ -3,7 +3,6 @@ package org.lucky0111.pettalk.service.user;
 import jakarta.transaction.Transactional;
 import org.lucky0111.pettalk.domain.dto.user.ProfileUpdateDTO;
 import org.lucky0111.pettalk.domain.entity.PetUser;
-import org.lucky0111.pettalk.repository.user.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;

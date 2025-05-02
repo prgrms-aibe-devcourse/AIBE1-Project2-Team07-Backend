@@ -1,4 +1,4 @@
-package org.lucky0111.pettalk.repository;
+package org.lucky0111.pettalk.repository.trainer;
 
 import org.lucky0111.pettalk.domain.entity.Trainer;
 import org.springframework.data.jpa.repository.JpaRepository;
