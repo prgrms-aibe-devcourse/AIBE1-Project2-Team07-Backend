@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Getter
 @Entity
@@ -13,15 +14,16 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class Trainer extends BaseTimeEntity {
     @Id
-    private String trainerId; // FK -> PetUser.userId
+    private UUID trainerId; // FK -> PetUser.userId
 
     @OneToOne
+    @MapsId
     @JoinColumn(name = "trainer_id")
     private PetUser user;
 
+    @Column(length = 1000)
     private String introduction;
     private Integer experienceYears;
-
     private LocalDateTime approvedAt;
 }
 

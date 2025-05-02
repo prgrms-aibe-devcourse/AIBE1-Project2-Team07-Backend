@@ -8,6 +8,7 @@ import org.springframework.data.annotation.CreatedDate;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.UUID;
 
 @Getter
 @Entity
@@ -15,7 +16,7 @@ import java.time.temporal.ChronoUnit;
 public class Subscription {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private String subscriptionId;
+    private UUID subscriptionId;
 
     @ManyToOne
     @JoinColumn(name = "user_id")

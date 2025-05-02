@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
 
+import java.util.UUID;
+
 @Getter
 @Entity
 @Table(name = "chatrooms")
@@ -12,7 +14,7 @@ import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
 public class Chatroom extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private String chatroomId;
+    private UUID chatroomId;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
