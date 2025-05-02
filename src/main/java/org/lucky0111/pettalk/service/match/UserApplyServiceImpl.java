@@ -10,10 +10,12 @@ import org.lucky0111.pettalk.domain.dto.match.UserApplyResponseDTO;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.domain.entity.trainer.Trainer;
 import org.lucky0111.pettalk.domain.entity.match.UserApply;
+import org.lucky0111.pettalk.exception.CustomException;
 import org.lucky0111.pettalk.repository.match.UserApplyRepository;
 import org.lucky0111.pettalk.repository.trainer.TrainerRepository;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.lucky0111.pettalk.util.auth.JWTUtil;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -43,14 +45,14 @@ public class UserApplyServiceImpl implements UserApplyService {
 
         // 트레이너 조회
         Trainer trainer = trainerRepository.findById(requestDTO.trainerId())
-                .orElseThrow(() -> new IllegalArgumentException("트레이너를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException("트레이너를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
         if (userApplyRepository.existsByPetUser_userIdAndTrainer_trainerIdAndStatus(
                 currentUserUUID,
                 requestDTO.trainerId(),
                 Status.PENDING
         )) {
-            throw new IllegalArgumentException("현재 신청 중 입니다.");
+            throw new CustomException("현재 신청 중 입니다.", HttpStatus.CONFLICT);
         };
 
         // UserApply 엔티티 생성
@@ -102,11 +104,11 @@ public class UserApplyServiceImpl implements UserApplyService {
 
         // 신청 정보 조회
         UserApply userApply = userApplyRepository.findById(applyId)
-                .orElseThrow(() -> new IllegalArgumentException("신청 정보를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException("신청 정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
         // 트레이너 권한 확인
         if (!userApply.getTrainer().getTrainerId().equals(currentUserUUID)) {
-            throw new IllegalArgumentException("해당 신청에 대한 권한이 없습니다.");
+            throw new CustomException("해당 신청에 대한 권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
 
         // 상태 업데이트
@@ -151,11 +153,11 @@ public class UserApplyServiceImpl implements UserApplyService {
         PetUser currentUser = getCurrentUser(request);
 
         UserApply userApply = userApplyRepository.findById(applyId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 신청서를 찾을 수 없습니다: " + applyId));
+                .orElseThrow(() -> new CustomException("해당 신청서를 찾을 수 없습니다: ", HttpStatus.NOT_FOUND));
 
         // 현재 사용자가 신청서의 작성자인지 확인
         if (!userApply.getPetUser().getUserId().equals(currentUserUUID)) {
-            throw new AccessDeniedException("해당 신청서를 삭제할 권한이 없습니다.");
+            throw new CustomException("해당 신청서를 삭제할 권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
 
         // 삭제 전에 응답용 DTO 생성
@@ -181,7 +183,7 @@ public class UserApplyServiceImpl implements UserApplyService {
     private UUID getCurrentUserUUID(HttpServletRequest request) {
         String token = extractJwtToken(request);
         if (token == null) {
-            throw new RuntimeException("인증 토큰을 찾을 수 없습니다.");
+            throw new CustomException("인증 토큰을 찾을 수 없습니다.", HttpStatus.UNAUTHORIZED);
         }
         return jwtUtil.getUserId(token);
     }
@@ -190,7 +192,7 @@ public class UserApplyServiceImpl implements UserApplyService {
     private PetUser getCurrentUser(HttpServletRequest request) {
         UUID currentUserUUID = getCurrentUserUUID(request);
         return petUserRepository.findById(currentUserUUID)
-                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException("사용자를 찾을 수 없습니다.", HttpStatus.UNAUTHORIZED));
     }
 
 
