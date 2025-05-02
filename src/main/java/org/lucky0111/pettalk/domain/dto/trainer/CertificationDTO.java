@@ -1,6 +1,6 @@
 package org.lucky0111.pettalk.domain.dto.trainer;
 
-import org.lucky0111.pettalk.domain.entity.Certification;
+import org.lucky0111.pettalk.domain.entity.trainer.Certification;
 
 import java.time.LocalDate;
 

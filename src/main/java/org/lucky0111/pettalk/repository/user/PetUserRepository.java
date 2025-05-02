@@ -1,6 +1,6 @@
 package org.lucky0111.pettalk.repository.user;
 
-import org.lucky0111.pettalk.domain.entity.PetUser;
+import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

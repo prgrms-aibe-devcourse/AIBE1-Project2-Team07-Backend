@@ -1,7 +1,6 @@
-package org.lucky0111.pettalk.domain.dto;
+package org.lucky0111.pettalk.domain.dto.error;
 
 import lombok.Builder;
-import lombok.Getter;
 
 @Builder
 public record ErrorResponseDTO (
