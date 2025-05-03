@@ -29,7 +29,11 @@ public class JWTFilter extends OncePerRequestFilter {
             "/api/v1/auth/register",
             "/",
             "/swagger-ui/",
-            "/v3/api-docs/"
+            "/v3/api-docs/",
+            "/swagger-resources/",
+            "/swagger-ui.html",
+            "/webjars/",
+            "/api-docs/"
     );
 
     public JWTFilter(JWTUtil jwtUtil) {
@@ -39,6 +43,7 @@ public class JWTFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         // Skip filter for excluded paths
+        logger.info("doFilterStart");
         String path = request.getRequestURI();
 
         if (shouldSkipFilter(path)) {
@@ -90,16 +95,18 @@ public class JWTFilter extends OncePerRequestFilter {
 
     // 요청 경로가 제외 목록의 경로 패턴과 일치하는지 확인
     private boolean shouldSkipFilter(String requestPath) {
-        return excludedPaths.stream()
-                .anyMatch(path -> {
-                    if (path.endsWith("/")) {
-                        // 경로가 '/'로 끝나면 하위 경로를 포함하는 패턴 매칭
-                        return requestPath.startsWith(path);
-                    } else {
-                        // 정확한 경로 일치 확인
-                        return requestPath.equals(path);
-                    }
-                });
+        return false;
+
+//        return excludedPaths.stream()
+//                .anyMatch(path -> {
+//                    if (path.endsWith("/")) {
+//                        // 경로가 '/'로 끝나면 하위 경로를 포함하는 패턴 매칭
+//                        return requestPath.startsWith(path);
+//                    } else {
+//                        // 정확한 경로 일치 확인
+//                        return requestPath.equals(path);
+//                    }
+//                });
     }
 
     private String extractToken(HttpServletRequest request) {

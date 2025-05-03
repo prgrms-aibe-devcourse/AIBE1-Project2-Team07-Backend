@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.Status;
+import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
 import org.lucky0111.pettalk.domain.dto.review.*;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.domain.entity.match.UserApply;
@@ -182,13 +183,17 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional(readOnly = true)
     public List<ReviewResponseDTO> getMyReviews(HttpServletRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
+        Object principal = authentication.getPrincipal();
 
-        System.out.println("username = " + username);
+        UUID userId = null;
+        if (principal instanceof CustomOAuth2User oAuth2User) {
+            userId = oAuth2User.getUserId();
+            System.out.println("사용자 ID: " + userId);
+        }
 
         UUID currentUserUUID = getCurrentUserUUID(request);
-        System.out.println("currentUserUUID = " + currentUserUUID);
-        List<Review> reviews = reviewRepository.findByUserApply_PetUser_UserId(currentUserUUID);
+        System.out.println("currentUserUUID = " + userId);
+        List<Review> reviews = reviewRepository.findByUserApply_PetUser_UserId(userId);
 
         return reviews.stream()
                 .map(review -> convertToResponseDTO(review, currentUserUUID))

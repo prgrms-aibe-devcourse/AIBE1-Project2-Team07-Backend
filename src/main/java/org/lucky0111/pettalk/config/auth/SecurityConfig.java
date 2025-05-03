@@ -81,7 +81,8 @@ public class SecurityConfig {
 
                 //경로별 인가 작업
                 .authorizeHttpRequests((auth) -> auth
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api/v1/auth/register",
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**",
+                                "/swagger-ui.html", "/webjars/**", "/api-docs/**", "/api/v1/auth/register",
                                 "/api/v1/auth/check-nickname", "/api/v1/auth/refresh", "/").permitAll()
 //                        .requestMatchers("/api/v1/auth/user-info", "/api/v1/auth/logout",
 //                                "/api/v1/auth/withdraw", "/api/v1/auth/profile",
