@@ -1,5 +1,5 @@
 server:
-  port: 8443 # 충돌 문제 시 수정
+  port: 8444 # 충돌 문제 시 수정
 spring:
   jpa:
     hibernate:

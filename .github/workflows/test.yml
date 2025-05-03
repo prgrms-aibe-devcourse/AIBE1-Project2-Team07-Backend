@@ -1,14 +1,8 @@
 # 워크플로우 이름: 1번째 단계 - 테스트 실행
 name: 1. Run Tests
 
-# 트리거 조건: main 브랜치에 push될 때만 실행됩니다.
-# paths 조건은 src 디렉토리 내 파일이 변경되었을 때만 워크플로우가 실행됨을 의미합니다.
 on:
-  push:
-    branches:
-      - main  # main 브랜치에 대해서만 실행
-    paths:
-      - 'src/**'  # src 디렉토리 내 파일이 변경될 때만 실행
+  workflow_call:
 
 # GitHub Actions에 필요한 권한 설정
 permissions:

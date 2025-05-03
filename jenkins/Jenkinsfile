@@ -3,17 +3,42 @@ pipeline {
 
     parameters {
         string(name: 'REGISTRY', defaultValue: 'ghcr.io', description: 'Docker Registry 주소')
-        string(name: 'IMAGE_NAME', defaultValue: 'lucky-0111/pr-practice', description: 'Docker 이미지 이름')
-        string(name: 'IMAGE_TAG', defaultValue: 'main', description: 'Docker 이미지 태그')
-        string(name: 'CONTAINER_NAME', defaultValue: 'myapp-container', description: '실행할 컨테이너 이름')
-        string(name: 'PORT', defaultValue: '8443', description: '컨테이너 포트')
+        string(name: 'IMAGE_NAME', defaultValue: 'prgrms-aibe-devcourse/aibe1-project2-team07-backend', description: 'Docker 이미지 이름')
     }
 
     environment {
-        IMAGE = "${params.REGISTRY}/${params.IMAGE_NAME}:${params.IMAGE_TAG}"
+        IMAGE_TAG = "${env.BRANCH_NAME}"
+        IMAGE = "${params.REGISTRY}/${params.IMAGE_NAME}:${env.IMAGE_TAG}"
     }
 
     stages {
+        stage('Validate Branch') {
+            steps {
+                script {
+                    if (!(env.BRANCH_NAME in ['main', 'dev'])) {
+                        error("Unsupported branch: ${env.BRANCH_NAME}. Only 'main' or 'dev' allowed.")
+                    }
+                }
+            }
+        }
+
+        stage('Set Deployment Variables') {
+            steps {
+                script {
+                    if (env.BRANCH_NAME == 'main') {
+                        env.PORT = '8443'
+                        env.CONTAINER_NAME = 'pet-talk-main'
+                        env.ENV_CREDENTIAL_ID = 'application-main'
+                    } else {
+                        env.PORT = '8444'
+                        env.CONTAINER_NAME = 'pet-talk-dev'
+                        env.ENV_CREDENTIAL_ID = 'application-dev'
+                    }
+                    echo "Deploying ${env.BRANCH_NAME} -> Container: ${env.CONTAINER_NAME}, Port: ${env.PORT}, Credential: ${env.ENV_CREDENTIAL_ID}"
+                }
+            }
+        }
+
         stage('Authenticate with GHCR') {
             steps {
                 echo 'GHCR에 인증 중...'
@@ -25,37 +50,41 @@ pipeline {
 
         stage('Pull Docker Image') {
             steps {
-                echo "Docker 이미지 가져오는 중... (이미지: \$IMAGE)"
-
-                // 기존 이미지 제거 (있다면)
-                sh "docker rmi -f \$IMAGE || true"
-
-                // GHCR에서 최신 이미지 가져오기
-                sh "docker pull \$IMAGE"
+                echo "Docker 이미지 가져오는 중... (이미지: ${env.IMAGE})"
+                sh "docker rmi -f ${env.IMAGE} || true"
+                sh "docker pull ${env.IMAGE}"
             }
         }
 
         stage('Stop Previous Container') {
             steps {
                 echo '기존 컨테이너 중지 중...'
-
-                // 컨테이너가 실행 중이면 중지 후 제거
-                sh "docker stop \$CONTAINER_NAME || true"
-                sh "docker rm \$CONTAINER_NAME || true"
+                sh "docker stop ${env.CONTAINER_NAME} || true"
+                sh "docker rm ${env.CONTAINER_NAME} || true"
             }
         }
 
         stage('Run New Container') {
             steps {
                 echo '새 컨테이너 실행 중...'
-
-                // 새 이미지로 컨테이너 실행
-                sh """
-                docker run -d \
-                  --name \$CONTAINER_NAME \
-                  -p \$PORT:\$PORT \
-                  \$IMAGE
-                """
+                script {
+                    withCredentials([file(credentialsId: env.ENV_CREDENTIAL_ID, variable: 'DOTENV_FILE_PATH')]) {
+                        withEnv([
+                            "CONTAINER_NAME=${env.CONTAINER_NAME}",
+                            "PORT=${env.PORT}",
+                            "IMAGE=${env.IMAGE}",
+                            "ENV_FILE_PATH=${DOTENV_FILE_PATH}"
+                        ]) {
+                            sh '''
+                                docker run -d \\
+                                  --name $CONTAINER_NAME \\
+                                  -p $PORT:$PORT \\
+                                  --env-file $ENV_FILE_PATH \\
+                                  $IMAGE
+                            '''
+                        }
+                    }
+                }
             }
         }
     }
