@@ -1,8 +1,10 @@
 package org.lucky0111.pettalk.domain.entity.trainer;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
 
@@ -10,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
+@Setter
 @Entity
 @Table(name = "trainers")
 @NoArgsConstructor
