@@ -1,0 +1,38 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, dev ]
+    paths:
+      - 'src/**'  # src 디렉토리 내 파일이 변경될 때만 실행
+
+permissions:
+  contents: read
+  packages: write
+  checks: write
+
+jobs:
+  #  test:
+  #    name: Run Tests
+  #    uses: ./.github/workflows/test.yml
+
+  build:
+    name: Build Docker Image
+    #    needs: test
+    #    if: ${{ needs.test.result == 'success' }}
+    uses: ./.github/workflows/build_image.yml
+    secrets: inherit
+
+  webhook:
+    name: Trigger Jenkins Webhook
+    needs: build
+    if: ${{ needs.build.result == 'success' }}
+    uses: ./.github/workflows/webhook.yml
+    secrets: inherit
+
+  slack:
+    name: Send Workflow Results to Slack
+    needs: webhook
+    if: ${{ needs.webhook.result == 'success' }}
+    uses: ./.github/workflows/slack_notification.yml
+    secrets: inherit
