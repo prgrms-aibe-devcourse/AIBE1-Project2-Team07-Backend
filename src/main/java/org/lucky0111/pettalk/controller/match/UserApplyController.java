@@ -45,9 +45,9 @@ public class UserApplyController {
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<UserApplyResponseDTO> createApply(@RequestBody UserApplyRequestDTO requestDTO, HttpServletRequest request) {
+    public ResponseEntity<UserApplyResponseDTO> createApply(@RequestBody UserApplyRequestDTO requestDTO) {
         log.info("신청서 제출 요청: {}", requestDTO);
-        UserApplyResponseDTO responseDTO = userApplyService.createApply(requestDTO, request);
+        UserApplyResponseDTO responseDTO = userApplyService.createApply(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
 
@@ -58,9 +58,9 @@ public class UserApplyController {
     )
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/user")
-    public ResponseEntity<List<UserApplyResponseDTO>> getUserApplies(HttpServletRequest request) {
+    public ResponseEntity<List<UserApplyResponseDTO>> getUserApplies() {
         log.info("사용자 신청 목록 조회 요청");
-        List<UserApplyResponseDTO> responseDTOs = userApplyService.getUserApplies(request);
+        List<UserApplyResponseDTO> responseDTOs = userApplyService.getUserApplies();
         return ResponseEntity.ok(responseDTOs);
     }
 
@@ -72,9 +72,9 @@ public class UserApplyController {
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/trainer")
     @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
-    public ResponseEntity<List<UserApplyResponseDTO>> getTrainerApplies(HttpServletRequest request) {
+    public ResponseEntity<List<UserApplyResponseDTO>> getTrainerApplies() {
         log.info("트레이너 신청 목록 조회 요청");
-        List<UserApplyResponseDTO> responseDTOs = userApplyService.getTrainerApplies(request);
+        List<UserApplyResponseDTO> responseDTOs = userApplyService.getTrainerApplies();
         return ResponseEntity.ok(responseDTOs);
     }
 
@@ -100,7 +100,7 @@ public class UserApplyController {
             return ResponseEntity.badRequest().build();
         }
 
-        UserApplyResponseDTO responseDTO = userApplyService.updateApplyStatus(applyId, status, request);
+        UserApplyResponseDTO responseDTO = userApplyService.updateApplyStatus(applyId, status);
         return ResponseEntity.ok(responseDTO);
     }
 
@@ -112,12 +112,12 @@ public class UserApplyController {
     @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{applyId}/delete")
     public ResponseEntity<UserApplyResponseDTO> deleteApply(
-            @PathVariable Long applyId,
-            HttpServletRequest request) {
+            @PathVariable Long applyId
+            ) {
 
         log.info("신청 삭제 요청: applyId={}", applyId);
 
-        UserApplyResponseDTO responseDTO = userApplyService.deleteApply(applyId, request);
+        UserApplyResponseDTO responseDTO = userApplyService.deleteApply(applyId);
         return ResponseEntity.ok(responseDTO);
     }
 }

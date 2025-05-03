@@ -4,7 +4,9 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.lucky0111.pettalk.domain.common.ErrorCode;
 import org.lucky0111.pettalk.domain.common.Status;
+import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
 import org.lucky0111.pettalk.domain.dto.match.UserApplyRequestDTO;
 import org.lucky0111.pettalk.domain.dto.match.UserApplyResponseDTO;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
@@ -15,7 +17,10 @@ import org.lucky0111.pettalk.repository.match.UserApplyRepository;
 import org.lucky0111.pettalk.repository.trainer.TrainerRepository;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.lucky0111.pettalk.util.auth.JWTUtil;
+import org.lucky0111.pettalk.util.error.ExceptionUtils;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,23 +40,20 @@ public class UserApplyServiceImpl implements UserApplyService {
     private final JWTUtil jwtUtil;
 
     @Transactional
-    public UserApplyResponseDTO createApply(UserApplyRequestDTO requestDTO, HttpServletRequest request) {
-        UUID currentUserUUID = getCurrentUserUUID(request);
-        PetUser currentUser = getCurrentUser(request);
+    public UserApplyResponseDTO createApply(UserApplyRequestDTO requestDTO) {
+        PetUser currentUser = getCurrentUser();
 
-        // 트레이너 조회
         Trainer trainer = trainerRepository.findById(requestDTO.trainerId())
-                .orElseThrow(() -> new CustomException("트레이너를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> ExceptionUtils.of(ErrorCode.TRAINER_NOT_FOUND));
 
         if (userApplyRepository.existsByPetUser_userIdAndTrainer_trainerIdAndStatus(
-                currentUserUUID,
+                currentUser.getUserId(),
                 requestDTO.trainerId(),
                 Status.PENDING
         )) {
-            throw new CustomException("현재 신청 중 입니다.", HttpStatus.CONFLICT);
+            throw ExceptionUtils.of(ErrorCode.APPLY_ALREADY_EXISTS);
         };
 
-        // UserApply 엔티티 생성
         UserApply userApply = new UserApply();
         userApply.setPetUser(currentUser);
         userApply.setTrainer(trainer);
@@ -59,52 +61,44 @@ public class UserApplyServiceImpl implements UserApplyService {
         userApply.setImageUrl(requestDTO.imageUrl());
         userApply.setStatus(Status.PENDING);
 
-        // 저장
         UserApply savedApply = userApplyRepository.save(userApply);
 
-        // 응답 DTO 변환 및 반환
         return convertToResponseDTO(savedApply);
     }
 
     @Transactional(readOnly = true)
-    public List<UserApplyResponseDTO> getUserApplies(HttpServletRequest request) {
-        UUID currentUserUUID = getCurrentUserUUID(request);
-        PetUser currentUser = getCurrentUser(request);
+    public List<UserApplyResponseDTO> getUserApplies() {
+        PetUser currentUser = getCurrentUser();
 
-        List<UserApply> userApplies = userApplyRepository.findByPetUser_UserId(currentUserUUID);
+        List<UserApply> userApplies = userApplyRepository.findByPetUser_UserId(currentUser.getUserId());
 
-        // 응답 DTO 변환 및 반환
         return userApplies.stream()
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public List<UserApplyResponseDTO> getTrainerApplies(HttpServletRequest request) {
-        UUID currentUserUUID = getCurrentUserUUID(request);
-        PetUser currentUser = getCurrentUser(request);
+    public List<UserApplyResponseDTO> getTrainerApplies() {
+        PetUser currentUser = getCurrentUser();
 
+        List<UserApply> trainerApplies = userApplyRepository.findByTrainer_TrainerId(currentUser.getUserId());
 
-        List<UserApply> trainerApplies = userApplyRepository.findByTrainer_TrainerId(currentUserUUID);
-
-        // 응답 DTO 변환 및 반환
         return trainerApplies.stream()
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
     }
 
     @Transactional
-    public UserApplyResponseDTO updateApplyStatus(Long applyId, Status status, HttpServletRequest request) {
-        UUID currentUserUUID = getCurrentUserUUID(request);
-        PetUser currentUser = getCurrentUser(request);
+    public UserApplyResponseDTO updateApplyStatus(Long applyId, Status status) {
+        PetUser currentUser = getCurrentUser();
 
         // 신청 정보 조회
         UserApply userApply = userApplyRepository.findById(applyId)
-                .orElseThrow(() -> new CustomException("신청 정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> ExceptionUtils.of(ErrorCode.APPLY_NOT_FOUND));
 
         // 트레이너 권한 확인
-        if (!userApply.getTrainer().getTrainerId().equals(currentUserUUID)) {
-            throw new CustomException("해당 신청에 대한 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        if (!userApply.getTrainer().getTrainerId().equals(currentUser.getUserId())) {
+            throw ExceptionUtils.of(ErrorCode.PERMISSION_DENIED);
         }
 
         // 상태 업데이트
@@ -117,7 +111,41 @@ public class UserApplyServiceImpl implements UserApplyService {
         return convertToResponseDTO(updatedApply);
     }
 
+    public UserApplyResponseDTO deleteApply(Long applyId) {
+        PetUser currentUser = getCurrentUser();
 
+        UserApply userApply = userApplyRepository.findById(applyId)
+                .orElseThrow(() -> ExceptionUtils.of(ErrorCode.APPLY_NOT_FOUND));
+
+        // 현재 사용자가 신청서의 작성자인지 확인
+        if (!userApply.getPetUser().getUserId().equals(currentUser.getUserId())) {
+            throw ExceptionUtils.of(ErrorCode.PERMISSION_DENIED);
+        }
+
+        // 삭제 전에 응답용 DTO 생성
+        UserApplyResponseDTO responseDTO = convertToResponseDTO(userApply);
+
+        // 신청서 삭제
+        userApplyRepository.delete(userApply);
+
+        return responseDTO;
+    }
+
+    private UUID getCurrentUserUUID() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication.getPrincipal() instanceof CustomOAuth2User userDetails) {
+            return userDetails.getUserId();
+        }
+
+        throw ExceptionUtils.of(ErrorCode.UNAUTHORIZED);
+    }
+
+    private PetUser getCurrentUser() {
+        UUID currentUserUUID = getCurrentUserUUID();
+        return petUserRepository.findById(currentUserUUID)
+                .orElseThrow(() -> ExceptionUtils.of(ErrorCode.USER_NOT_FOUND));
+    }
 
     // UserApply 엔티티를 ResponseDTO로 변환하는 메서드
     public UserApplyResponseDTO convertToResponseDTO(UserApply userApply) {
@@ -136,6 +164,9 @@ public class UserApplyServiceImpl implements UserApplyService {
                 userApply.getPetUser().getName(),
                 userApply.getTrainer().getTrainerId(),
                 userApply.getTrainer().getUser().getName(),
+                userApply.getPetType(),
+                userApply.getPetBreed(),
+                userApply.getPetMonthAge(),
                 userApply.getContent(),
                 userApply.getImageUrl(),
                 userApply.getStatus(),
@@ -144,52 +175,6 @@ public class UserApplyServiceImpl implements UserApplyService {
         );
     }
 
-    public UserApplyResponseDTO deleteApply(Long applyId, HttpServletRequest request) {
-        UUID currentUserUUID = getCurrentUserUUID(request);
-        PetUser currentUser = getCurrentUser(request);
-
-        UserApply userApply = userApplyRepository.findById(applyId)
-                .orElseThrow(() -> new CustomException("해당 신청서를 찾을 수 없습니다: ", HttpStatus.NOT_FOUND));
-
-        // 현재 사용자가 신청서의 작성자인지 확인
-        if (!userApply.getPetUser().getUserId().equals(currentUserUUID)) {
-            throw new CustomException("해당 신청서를 삭제할 권한이 없습니다.", HttpStatus.FORBIDDEN);
-        }
-
-        // 삭제 전에 응답용 DTO 생성
-        UserApplyResponseDTO responseDTO = convertToResponseDTO(userApply);
-
-        // 신청서 삭제
-        userApplyRepository.delete(userApply);
-
-        return responseDTO;
-    }
-
-    private String extractJwtToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
-        System.out.println("bearerToken = " + bearerToken);
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-
-            return bearerToken.substring(7);
-        }
-        return null;
-    }
-
-    // 현재 인증된 사용자의 UUID 가져오기
-    private UUID getCurrentUserUUID(HttpServletRequest request) {
-        String token = extractJwtToken(request);
-        if (token == null) {
-            throw new CustomException("인증 토큰을 찾을 수 없습니다.", HttpStatus.UNAUTHORIZED);
-        }
-        return jwtUtil.getUserId(token);
-    }
-
-    // 현재 사용자 엔티티 가져오기
-    private PetUser getCurrentUser(HttpServletRequest request) {
-        UUID currentUserUUID = getCurrentUserUUID(request);
-        return petUserRepository.findById(currentUserUUID)
-                .orElseThrow(() -> new CustomException("사용자를 찾을 수 없습니다.", HttpStatus.UNAUTHORIZED));
-    }
 
 
 }

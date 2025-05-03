@@ -30,6 +30,15 @@ public class UserApply extends BaseTimeEntity {
     @JoinColumn(name = "trainer_id")
     private Trainer trainer;
 
+    @Column(length = 100, nullable = false)
+    private String petType;
+
+    @Column(length = 100, nullable = false)
+    private String petBreed;
+
+    @Column(nullable = false)
+    private Integer petMonthAge;
+
     @Column(length = 500, nullable = false)
     private String content;
 

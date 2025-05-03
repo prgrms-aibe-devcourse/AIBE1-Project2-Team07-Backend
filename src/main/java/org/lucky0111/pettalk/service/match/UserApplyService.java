@@ -11,15 +11,15 @@ import java.util.List;
 
 
 public interface UserApplyService {
-    UserApplyResponseDTO createApply(UserApplyRequestDTO requestDTO, HttpServletRequest request);
+    UserApplyResponseDTO createApply(UserApplyRequestDTO requestDTO);
 
-    List<UserApplyResponseDTO> getUserApplies(HttpServletRequest request);
+    List<UserApplyResponseDTO> getUserApplies();
 
-    List<UserApplyResponseDTO> getTrainerApplies(HttpServletRequest request);
+    List<UserApplyResponseDTO> getTrainerApplies();
 
-    UserApplyResponseDTO updateApplyStatus(Long applyId, Status status,HttpServletRequest request);
+    UserApplyResponseDTO updateApplyStatus(Long applyId, Status status);
 
     UserApplyResponseDTO convertToResponseDTO(UserApply userApply);
 
-    UserApplyResponseDTO deleteApply(Long applyId,HttpServletRequest request);
+    UserApplyResponseDTO deleteApply(Long apply);
 }
