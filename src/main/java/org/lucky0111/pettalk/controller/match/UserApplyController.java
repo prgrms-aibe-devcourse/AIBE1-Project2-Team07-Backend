@@ -194,7 +194,7 @@ public class UserApplyController {
         // 상태 유효성 검사
         Status status;
         try {
-            status = statusRequest != null ? Status.valueOf(statusRequest.name()) : null;
+            status = statusRequest;
         } catch (IllegalArgumentException | NullPointerException e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,

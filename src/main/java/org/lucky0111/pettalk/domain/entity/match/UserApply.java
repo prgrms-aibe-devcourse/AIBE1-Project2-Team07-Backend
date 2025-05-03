@@ -41,9 +41,9 @@ public class UserApply extends BaseTimeEntity {
 
     @Column(length = 500, nullable = false)
     private String content;
-
     private String imageUrl;
 
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private Status status;
 }
