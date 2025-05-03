@@ -30,9 +30,9 @@ jobs:
     uses: ./.github/workflows/webhook.yml
     secrets: inherit
 
-  slack:
-    name: Send Workflow Results to Slack
-    needs: webhook
-    if: ${{ needs.webhook.result == 'success' }}
-    uses: ./.github/workflows/slack_notification.yml
-    secrets: inherit
+#  slack:
+#    name: Send Workflow Results to Slack
+#    needs: webhook
+#    if: ${{ needs.webhook.result == 'success' }}
+#    uses: ./.github/workflows/slack_notification.yml
+#    secrets: inherit
