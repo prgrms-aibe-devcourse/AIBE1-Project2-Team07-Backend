@@ -29,12 +29,14 @@ pipeline {
                         env.PORT = '8443'
                         env.CONTAINER_NAME = 'pet-talk-main'
                         env.ENV_CREDENTIAL_ID = 'application-main'
+                        env.SPRING_PROFILE = 'prod'
                     } else {
                         env.PORT = '8444'
                         env.CONTAINER_NAME = 'pet-talk-dev'
                         env.ENV_CREDENTIAL_ID = 'application-dev'
+                        env.SPRING_PROFILE = 'dev'
                     }
-                    echo "Deploying ${env.BRANCH_NAME} -> Container: ${env.CONTAINER_NAME}, Port: ${env.PORT}, Credential: ${env.ENV_CREDENTIAL_ID}"
+                    echo "Deploying ${env.BRANCH_NAME} -> Container: ${env.CONTAINER_NAME}, Port: ${env.PORT}, Credential: ${env.ENV_CREDENTIAL_ID}, Profile: ${env.SPRING_PROFILE}"
                 }
             }
         }
@@ -73,13 +75,15 @@ pipeline {
                             "CONTAINER_NAME=${env.CONTAINER_NAME}",
                             "PORT=${env.PORT}",
                             "IMAGE=${env.IMAGE}",
-                            "ENV_FILE_PATH=${DOTENV_FILE_PATH}"
+                            "ENV_FILE_PATH=${DOTENV_FILE_PATH}",
+                            "SPRING_PROFILE=${env.SPRING_PROFILE}"
                         ]) {
                             sh '''
                                 docker run -d \\
                                   --name $CONTAINER_NAME \\
                                   -p $PORT:$PORT \\
                                   --env-file $ENV_FILE_PATH \\
+                                  -e SPRING_PROFILES_ACTIVE=$SPRING_PROFILE \\
                                   $IMAGE
                             '''
                         }
