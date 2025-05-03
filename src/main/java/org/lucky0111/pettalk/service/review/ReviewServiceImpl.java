@@ -17,6 +17,7 @@ import org.lucky0111.pettalk.repository.review.ReviewRepository;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.lucky0111.pettalk.util.auth.JWTUtil;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ import java.nio.file.AccessDeniedException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -195,50 +197,47 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
-    public ReviewLikeResponseDTO addLikeToReview(Long reviewId, HttpServletRequest request) {
+    public ResponseEntity<?> toggleLikeForReview(Long reviewId, HttpServletRequest request) {
         UUID currentUserUUID = getCurrentUserUUID(request);
         PetUser currentUser = getCurrentUser(request);
 
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new CustomException("리뷰를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new EntityNotFoundException("리뷰를 찾을 수 없습니다."));
 
         // 이미 좋아요가 있는지 확인
-        if (reviewLikeRepository.existsByReviewAndUser(review, currentUser)) {
-            throw new CustomException("이미 좋아요를 누르셨습니다.", HttpStatus.CONFLICT);
+        Optional<ReviewLike> existingLike = reviewLikeRepository.findByReviewAndUser(review, currentUser);
+
+        if (existingLike.isPresent()) {
+            // 좋아요가 있으면 삭제
+            reviewLikeRepository.delete(existingLike.get());
+            return ResponseEntity.ok().body(Map.of(
+                    "status", "removed",
+                    "message", "좋아요가 취소되었습니다."
+            ));
+        } else {
+            // 좋아요가 없으면 추가
+            ReviewLike reviewLike = new ReviewLike();
+            reviewLike.setReview(review);
+            reviewLike.setUser(currentUser);
+
+            ReviewLike savedLike = reviewLikeRepository.save(reviewLike);
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            String createdAt = java.time.LocalDateTime.now().format(formatter);
+
+            ReviewLikeResponseDTO response = new ReviewLikeResponseDTO(
+                    savedLike.getLikeId(),
+                    review.getReviewId(),
+                    currentUserUUID,
+                    createdAt
+            );
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                    "status", "added",
+                    "data", response,
+                    "message", "좋아요가 추가되었습니다."
+            ));
         }
-
-        // 좋아요 생성
-        ReviewLike reviewLike = new ReviewLike();
-        reviewLike.setReview(review);
-        reviewLike.setUser(currentUser);
-
-        ReviewLike savedLike = reviewLikeRepository.save(reviewLike);
-
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        String createdAt = java.time.LocalDateTime.now().format(formatter);
-
-        return new ReviewLikeResponseDTO(
-                savedLike.getLikeId(),
-                review.getReviewId(),
-                currentUserUUID,
-                createdAt
-        );
-    }
-
-    @Override
-    @Transactional
-    public void removeLikeFromReview(Long reviewId, HttpServletRequest request) {
-        UUID currentUserUUID = getCurrentUserUUID(request);
-        PetUser currentUser = getCurrentUser(request);
-
-        Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new CustomException("리뷰를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
-
-        // 좋아요 확인 및 삭제
-        ReviewLike reviewLike = reviewLikeRepository.findByReviewAndUser(review, currentUser)
-                .orElseThrow(() -> new CustomException("좋아요를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
-
-        reviewLikeRepository.delete(reviewLike);
     }
 
     @Override

@@ -121,27 +121,14 @@ public class ReviewController {
     }
 
     @Operation(
-            summary = "리뷰 좋아요 추가",
-            description = "특정 리뷰에 좋아요를 추가합니다. 인증된 사용자만 가능합니다."
+            summary = "리뷰 좋아요 토글",
+            description = "특정 리뷰에 좋아요를 토글(추가/삭제)합니다. 인증된 사용자만 가능합니다."
     )
     @SecurityRequirement(name = "bearerAuth")
-    @PostMapping("/{reviewId}/likes")
-    public ResponseEntity<ReviewLikeResponseDTO> addLikeToReview(@PathVariable Long reviewId, HttpServletRequest request) {
-        log.info("리뷰 좋아요 추가 요청: reviewId={}", reviewId);
-        ReviewLikeResponseDTO likeResponse = reviewService.addLikeToReview(reviewId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(likeResponse);
-    }
-
-    @Operation(
-            summary = "리뷰 좋아요 삭제",
-            description = "특정 리뷰에 좋아요를 삭제합니다. 인증된 사용자만 가능합니다."
-    )
-    @SecurityRequirement(name = "bearerAuth")
-    @DeleteMapping("/{reviewId}/likes")
-    public ResponseEntity<Void> removeLikeFromReview(@PathVariable Long reviewId, HttpServletRequest request) {
-        log.info("리뷰 좋아요 삭제 요청: reviewId={}", reviewId);
-        reviewService.removeLikeFromReview(reviewId, request);
-        return ResponseEntity.noContent().build();
+    @PostMapping("/{reviewId}/likes/toggle")
+    public ResponseEntity<?> toggleReviewLike(@PathVariable Long reviewId, HttpServletRequest request) {
+        log.info("리뷰 좋아요 토글 요청: reviewId={}", reviewId);
+        return reviewService.toggleLikeForReview(reviewId, request);
     }
 
     @Operation(

@@ -2,6 +2,7 @@ package org.lucky0111.pettalk.service.review;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.lucky0111.pettalk.domain.dto.review.*;
+import org.springframework.http.ResponseEntity;
 
 import java.nio.file.AccessDeniedException;
 import java.util.List;
@@ -29,11 +30,8 @@ public interface ReviewService {
     // 본인이 작성한 리뷰 리스트 조회
     List<ReviewResponseDTO> getMyReviews(HttpServletRequest request);
 
-    // 리뷰에 좋아요 추가
-    ReviewLikeResponseDTO addLikeToReview(Long reviewId, HttpServletRequest request);
-
-    // 리뷰에 좋아요 삭제
-    void removeLikeFromReview(Long reviewId, HttpServletRequest request);
+    // 리뷰에 좋아요/삭제
+    ResponseEntity<?> toggleLikeForReview(Long reviewId, HttpServletRequest request);
 
     // 리뷰의 좋아요 개수 조회
     ReviewLikeCountDTO getReviewLikesCount(Long reviewId);
