@@ -60,19 +60,3 @@ spring:
 
 front:
   url: ${FRONT_URL}
-
-cookie:
-  domain: ${COOKIE_DOMAIN}
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,prometheus,metrics
-  endpoint:
-    health:
-      show-details: when_authorized
-  metrics:
-    export:
-      prometheus:
-        enabled: true

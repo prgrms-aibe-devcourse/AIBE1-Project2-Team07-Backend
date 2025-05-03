@@ -24,6 +24,7 @@ public class UserService {
             PetUser user = userOptional.get();
             // 실제 삭제 대신 상태를 변경하는 논리적 삭제 (Soft Delete) 방식 적용
             user.setStatus("WITHDRAWN");
+            user.setSocialId(null);
             userRepository.save(user);
             return true;
         }
@@ -39,13 +40,13 @@ public class UserService {
             PetUser user = userOptional.get();
 
             // 닉네임 업데이트 (값이 있을 경우에만)
-            if (profileUpdateDTO.getNickname() != null && !profileUpdateDTO.getNickname().isBlank()) {
-                user.setNickname(profileUpdateDTO.getNickname());
+            if (profileUpdateDTO.nickname() != null && !profileUpdateDTO.nickname().isBlank()) {
+                user.setNickname(profileUpdateDTO.nickname());
             }
 
             // 프로필 이미지 URL 업데이트 (값이 있을 경우에만)
-            if (profileUpdateDTO.getProfileImageUrl() != null && !profileUpdateDTO.getProfileImageUrl().isBlank()) {
-                user.setProfileImageUrl(profileUpdateDTO.getProfileImageUrl());
+            if (profileUpdateDTO.profileImageUrl() != null && !profileUpdateDTO.profileImageUrl().isBlank()) {
+                user.setProfileImageUrl(profileUpdateDTO.profileImageUrl());
             }
 
             return userRepository.save(user);

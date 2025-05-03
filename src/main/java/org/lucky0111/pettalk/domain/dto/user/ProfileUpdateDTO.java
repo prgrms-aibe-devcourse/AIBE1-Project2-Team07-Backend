@@ -1,15 +1,5 @@
 package org.lucky0111.pettalk.domain.dto.user;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+public record ProfileUpdateDTO(String nickname, String profileImageUrl) {
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-public class ProfileUpdateDTO {
-    private String nickname;
-    private String profileImageUrl;
 }
