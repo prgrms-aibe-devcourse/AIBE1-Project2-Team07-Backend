@@ -3,10 +3,12 @@ package org.lucky0111.pettalk.util.auth;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
+import org.lucky0111.pettalk.domain.dto.auth.TokenDTO;
 import org.lucky0111.pettalk.domain.dto.user.UserDTO;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -16,8 +18,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 public class JWTFilter extends OncePerRequestFilter {
 
     private final JWTUtil jwtUtil;
@@ -31,6 +35,9 @@ public class JWTFilter extends OncePerRequestFilter {
             "/swagger-ui/",
             "/v3/api-docs/"
     );
+
+    // 토큰 자동 갱신을 위한 임계값 (초)
+    private static final long TOKEN_REFRESH_THRESHOLD_SECONDS = 5 * 60; // 5분
 
     public JWTFilter(JWTUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
@@ -46,33 +53,51 @@ public class JWTFilter extends OncePerRequestFilter {
             return;
         }
 
-        String authorization = extractToken(request);
+        String accessToken = extractToken(request);
 
         //Authorization 헤더 검증
-        if (authorization == null) {
-            System.out.println("token null");
+        if (accessToken == null) {
+            log.debug("토큰이 없습니다");
             filterChain.doFilter(request, response);
-
-            //조건이 해당되면 메소드 종료 (필수)
             return;
         }
 
-        //토큰
-        String token = authorization;
-
-        if (jwtUtil.isExpired(token)) {
-            System.out.println("token expired");
+        // 토큰 만료 확인
+        if (jwtUtil.isExpired(accessToken)) {
+            log.debug("토큰이 만료되었습니다");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"error\":\"Access token expired\",\"code\":\"TOKEN_EXPIRED\"}");
             return;
         }
 
-        //토큰에서 username과 role 획득
-        String provider = jwtUtil.getProvider(token);
-        String socialId = jwtUtil.getSocialId(token);
-        String role = jwtUtil.getRole(token);
-        UUID userId = jwtUtil.getUserId(token);
-        String email = jwtUtil.getEmail(token);
+        // 토큰 갱신이 필요한지 확인 (만료 5분 전)
+        long expiresIn = jwtUtil.getExpiresIn(accessToken);
+        if (expiresIn <= TOKEN_REFRESH_THRESHOLD_SECONDS) {
+            log.debug("토큰 갱신이 필요합니다. 남은 시간: {}초", expiresIn);
+
+            // 리프레시 토큰 확인 (요청 헤더에서)
+            String refreshToken = extractRefreshToken(request);
+            if (refreshToken != null) {
+                Optional<TokenDTO> newTokens = jwtUtil.refreshAccessToken(refreshToken);
+                if (newTokens.isPresent()) {
+                    // 새 액세스 토큰으로 교체
+                    accessToken = newTokens.get().accessToken();
+                    // 응답 헤더에 새 토큰 추가
+                    response.setHeader("New-Access-Token", accessToken);
+                    response.setHeader("New-Refresh-Token", newTokens.get().refreshToken());
+                    response.setHeader("Token-Expires-In", String.valueOf(newTokens.get().expiresIn()));
+                    log.debug("토큰이 자동으로 갱신되었습니다.");
+                }
+            }
+        }
+
+        // 토큰에서
+        String provider = jwtUtil.getProvider(accessToken);
+        String socialId = jwtUtil.getSocialId(accessToken);
+        String role = jwtUtil.getRole(accessToken);
+        UUID userId = jwtUtil.getUserId(accessToken);
+        String email = jwtUtil.getEmail(accessToken);
 
         //userDTO를 생성하여 값 set
         UserDTO userDTO = new UserDTO(role, null, provider, socialId, userId, email);
@@ -109,16 +134,11 @@ public class JWTFilter extends OncePerRequestFilter {
             return bearerToken.substring(7);
         }
 
-        // If not in header, check cookies
-        Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if (cookie.getName().equals("Authorization")) {
-                    return cookie.getValue();
-                }
-            }
-        }
-
         return null;
+    }
+
+    private String extractRefreshToken(HttpServletRequest request) {
+        // 리프레시 토큰은 별도의 헤더에서 확인
+        return request.getHeader("Refresh-Token");
     }
 }
