@@ -44,16 +44,13 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
-    public ReviewResponseDTO createReview(ReviewRequestDTO requestDTO,HttpServletRequest request) {
-        UUID currentUserUUID = getCurrentUserUUID(request);
-        PetUser currentUser = getCurrentUser(request);
+    public ReviewResponseDTO createReview(ReviewRequestDTO requestDTO) {
+        PetUser currentUser = getCurrentUser();
 
-        // 신청서 조회
         UserApply userApply = userApplyRepository.findById(requestDTO.applyId())
                 .orElseThrow(() -> new CustomException("해당 신청서를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
-        // 신청서 작성자 확인
-        if (!userApply.getPetUser().getUserId().equals(currentUserUUID)) {
+        if (!userApply.getPetUser().getUserId().equals(currentUser.getUserId())) {
             throw new CustomException("리뷰를 작성할 권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
 
@@ -76,12 +73,13 @@ public class ReviewServiceImpl implements ReviewService {
 
         Review savedReview = reviewRepository.save(review);
 
-        return convertToResponseDTO(savedReview, currentUserUUID);
+        return convertToResponseDTO(savedReview, currentUser.getUserId());
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<ReviewResponseDTO> getAllReviews() {
-        UUID currentUserUUID = UUID.fromString("3fa85f64-5717-4562-b3fc-2c963f66afa6");
+        UUID currentUserUUID = getCurrentUserUUID();
 
         List<Review> reviews = reviewRepository.findAllWithRelations();
 
@@ -114,8 +112,9 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public ReviewResponseDTO getReviewById(Long reviewId, HttpServletRequest request) {
-        UUID currentUserUUID = getCurrentUserUUID(request);
+    public ReviewResponseDTO getReviewById(Long reviewId) {
+        UUID currentUserUUID = getCurrentUserUUID();
+
         Review review = reviewRepository.findByIdWithRelations(reviewId)
                 .orElseThrow(() -> new CustomException("리뷰를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
@@ -124,8 +123,8 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
-    public ReviewResponseDTO updateReview(Long reviewId, ReviewUpdateDTO updateDTO, HttpServletRequest request) {
-        UUID currentUserUUID = getCurrentUserUUID(request);
+    public ReviewResponseDTO updateReview(Long reviewId, ReviewUpdateDTO updateDTO) {
+        UUID currentUserUUID = getCurrentUserUUID();
 
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new CustomException("리뷰를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
@@ -154,8 +153,8 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Transactional
-    public void deleteReview(Long reviewId, HttpServletRequest request) {
-        UUID currentUserUUID = getCurrentUserUUID(request);
+    public void deleteReview(Long reviewId) {
+        UUID currentUserUUID = getCurrentUserUUID();
 
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new CustomException("리뷰를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
@@ -170,8 +169,8 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReviewResponseDTO> getReviewsByTrainerId(UUID trainerId, HttpServletRequest request) {
-        UUID currentUserUUID = getCurrentUserUUID(request);
+    public List<ReviewResponseDTO> getReviewsByTrainerId(UUID trainerId) {
+        UUID currentUserUUID = getCurrentUserUUID();
         List<Review> reviews = reviewRepository.findByUserApply_Trainer_TrainerId(trainerId);
 
         return reviews.stream()
@@ -181,7 +180,7 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReviewResponseDTO> getMyReviews(HttpServletRequest request) {
+    public List<ReviewResponseDTO> getMyReviews() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principal = authentication.getPrincipal();
 
@@ -191,7 +190,7 @@ public class ReviewServiceImpl implements ReviewService {
             System.out.println("사용자 ID: " + userId);
         }
 
-        UUID currentUserUUID = getCurrentUserUUID(request);
+        UUID currentUserUUID = getCurrentUserUUID();
         System.out.println("currentUserUUID = " + userId);
         List<Review> reviews = reviewRepository.findByUserApply_PetUser_UserId(userId);
 
@@ -202,9 +201,8 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
-    public ResponseEntity<?> toggleLikeForReview(Long reviewId, HttpServletRequest request) {
-        UUID currentUserUUID = getCurrentUserUUID(request);
-        PetUser currentUser = getCurrentUser(request);
+    public ResponseEntity<?> toggleLikeForReview(Long reviewId) {
+        PetUser currentUser = getCurrentUser();
 
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new EntityNotFoundException("리뷰를 찾을 수 없습니다."));
@@ -233,7 +231,7 @@ public class ReviewServiceImpl implements ReviewService {
             ReviewLikeResponseDTO response = new ReviewLikeResponseDTO(
                     savedLike.getLikeId(),
                     review.getReviewId(),
-                    currentUserUUID,
+                    currentUser.getUserId(),
                     createdAt
             );
 
@@ -296,30 +294,21 @@ public class ReviewServiceImpl implements ReviewService {
         );
     }
 
-    private String extractJwtToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
-        System.out.println("bearerToken = " + bearerToken);
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+    private UUID getCurrentUserUUID() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-            return bearerToken.substring(7);
+        if (authentication.getPrincipal() instanceof CustomOAuth2User userDetails) {
+            return userDetails.getUserId();
         }
-        return null;
+
+        throw new CustomException("사용자를 찾을 수 없습니다.", HttpStatus.UNAUTHORIZED);
+//        throw ExceptionUtils.of(ErrorCode.UNAUTHORIZED);
     }
 
-    // 현재 인증된 사용자의 UUID 가져오기
-    private UUID getCurrentUserUUID(HttpServletRequest request) {
-        String token = extractJwtToken(request);
-        if (token == null) {
-            throw new CustomException("인증 토큰을 찾을 수 없습니다.", HttpStatus.UNAUTHORIZED);
-        }
-        return jwtUtil.getUserId(token);
-    }
-
-    // 현재 사용자 엔티티 가져오기
-    private PetUser getCurrentUser(HttpServletRequest request) {
-        UUID currentUserUUID = getCurrentUserUUID(request);
+    private PetUser getCurrentUser() {
+        UUID currentUserUUID = getCurrentUserUUID();
         return petUserRepository.findById(currentUserUUID)
-                .orElseThrow(() -> new CustomException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new CustomException("사용자가 없습니다", HttpStatus.NOT_FOUND));
     }
 
 

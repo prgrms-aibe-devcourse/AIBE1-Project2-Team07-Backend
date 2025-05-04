@@ -39,9 +39,9 @@ public class ReviewController {
             description = "새로운 리뷰를 작성합니다. 인증된 사용자만 접근 가능합니다."
     )
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<ReviewResponseDTO> createReview(@RequestBody ReviewRequestDTO requestDTO, HttpServletRequest request){
+    public ResponseEntity<ReviewResponseDTO> createReview(@RequestBody ReviewRequestDTO requestDTO){
         log.info("리뷰 작성 요청: {}", requestDTO);
-        ReviewResponseDTO responseDTO = reviewService.createReview(requestDTO, request);
+        ReviewResponseDTO responseDTO = reviewService.createReview(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
 
@@ -63,9 +63,9 @@ public class ReviewController {
             description = "특정 ID의 리뷰를 상세 조회합니다. 인증된 사용자만 접근 가능합니다."
     )
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<ReviewResponseDTO> getReviewById(@PathVariable Long reviewId, HttpServletRequest request) {
+    public ResponseEntity<ReviewResponseDTO> getReviewById(@PathVariable Long reviewId) {
         log.info("리뷰 상세 조회 요청: reviewId={}", reviewId);
-        ReviewResponseDTO review = reviewService.getReviewById(reviewId, request);
+        ReviewResponseDTO review = reviewService.getReviewById(reviewId);
         return ResponseEntity.ok(review);
     }
 
@@ -77,10 +77,10 @@ public class ReviewController {
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<ReviewResponseDTO> updateReview(
             @PathVariable Long reviewId,
-            @RequestBody ReviewUpdateDTO updateDTO,
-            HttpServletRequest request) {
+            @RequestBody ReviewUpdateDTO updateDTO
+            ) {
         log.info("리뷰 수정 요청: reviewId={}, updateDTO={}", reviewId, updateDTO);
-        ReviewResponseDTO responseDTO = reviewService.updateReview(reviewId, updateDTO, request);
+        ReviewResponseDTO responseDTO = reviewService.updateReview(reviewId, updateDTO);
         return ResponseEntity.ok(responseDTO);
     }
 
@@ -90,9 +90,9 @@ public class ReviewController {
             description = "특정 ID의 리뷰를 삭제합니다. 작성자 또는 관리자만 삭제 가능합니다."
     )
     @DeleteMapping("/{reviewId}")
-    public ResponseEntity<Void> deleteReview(@PathVariable Long reviewId, HttpServletRequest request) {
+    public ResponseEntity<Void> deleteReview(@PathVariable Long reviewId) {
         log.info("리뷰 삭제 요청: reviewId={}", reviewId);
-        reviewService.deleteReview(reviewId, request);
+        reviewService.deleteReview(reviewId);
         return ResponseEntity.noContent().build();
     }
 
@@ -102,9 +102,9 @@ public class ReviewController {
     )
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/trainers/{trainerId}")
-    public ResponseEntity<List<ReviewResponseDTO>> getReviewsByTrainerId(@PathVariable UUID trainerId, HttpServletRequest request) {
+    public ResponseEntity<List<ReviewResponseDTO>> getReviewsByTrainerId(@PathVariable UUID trainerId) {
         log.info("훈련사 별 리뷰 목록 조회 요청: trainerId={}", trainerId);
-        List<ReviewResponseDTO> reviews = reviewService.getReviewsByTrainerId(trainerId, request);
+        List<ReviewResponseDTO> reviews = reviewService.getReviewsByTrainerId(trainerId);
         return ResponseEntity.ok(reviews);
     }
 
@@ -114,9 +114,9 @@ public class ReviewController {
     )
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/users/me")
-    public ResponseEntity<List<ReviewResponseDTO>> getMyReviews(HttpServletRequest request) {
+    public ResponseEntity<List<ReviewResponseDTO>> getMyReviews() {
         log.info("본인 작성 리뷰 목록 조회 요청");
-        List<ReviewResponseDTO> reviews = reviewService.getMyReviews(request);
+        List<ReviewResponseDTO> reviews = reviewService.getMyReviews();
         return ResponseEntity.ok(reviews);
     }
 
@@ -126,9 +126,9 @@ public class ReviewController {
     )
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/{reviewId}/likes/toggle")
-    public ResponseEntity<?> toggleReviewLike(@PathVariable Long reviewId, HttpServletRequest request) {
+    public ResponseEntity<?> toggleReviewLike(@PathVariable Long reviewId) {
         log.info("리뷰 좋아요 토글 요청: reviewId={}", reviewId);
-        return reviewService.toggleLikeForReview(reviewId, request);
+        return reviewService.toggleLikeForReview(reviewId);
     }
 
     @Operation(
