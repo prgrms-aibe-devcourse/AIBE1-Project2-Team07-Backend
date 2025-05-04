@@ -1,22 +1,15 @@
 # 워크플로우 이름: 2번째 단계 - Docker 이미지 빌드
 name: 2. Build Docker Image
 
-# 트리거 조건: 테스트 워크플로우가 성공적으로 완료되면 실행됩니다.
-# workflow_run 트리거는 다른 워크플로우의 실행 결과에 따라 이 워크플로우를 실행합니다.
 on:
-  workflow_run:
-    workflows: ["1. Run Tests"]  # "1. Run Tests" 워크플로우의 실행 결과를 확인
-    types:
-      - completed  # 해당 워크플로우가 완료된 시점에 실행
-    branches:
-      - main  # main 브랜치에 대해서만 실행
+  workflow_call:
 
 # 실행할 작업(job) 정의
 jobs:
   # 빌드 작업 정의
   build:
     # 조건문: 테스트 워크플로우가 성공했을 때만 실행
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
     # 실행 환경: Ubuntu 최신 버전
     runs-on: ubuntu-latest
 
@@ -52,6 +45,8 @@ jobs:
         uses: docker/metadata-action@v5  # Docker 메타데이터 액션 v5 버전 사용
         with:
           images: ghcr.io/${{ github.repository }}  # 이미지 이름 설정(저장소 이름 기반)
+          tags: |
+            type=ref,event=branch
 
       # 4. Docker 이미지 빌드 및 푸시: Dockerfile을 기반으로 이미지를 빌드하고 GHCR에 업로드합니다.
       - name: Build and push Docker image

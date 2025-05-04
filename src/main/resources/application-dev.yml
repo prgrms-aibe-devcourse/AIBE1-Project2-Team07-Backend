@@ -1,5 +1,5 @@
 server:
-  port: 8443 # 충돌 문제 시 수정
+  port: 8444 # 충돌 문제 시 수정
 spring:
   jpa:
     hibernate:
@@ -60,19 +60,3 @@ spring:
 
 front:
   url: ${FRONT_URL}
-
-cookie:
-  domain: ${COOKIE_DOMAIN}
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,prometheus,metrics
-  endpoint:
-    health:
-      show-details: when_authorized
-  metrics:
-    export:
-      prometheus:
-        enabled: true
