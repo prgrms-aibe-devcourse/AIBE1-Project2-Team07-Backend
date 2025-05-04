@@ -1,18 +1,12 @@
 name: 3. Trigger Jenkins Webhook
 
-# 이미지 빌드 워크플로우가 성공적으로 완료되면 실행
 on:
-  workflow_run:
-    workflows: ["2. Build Docker Image"]
-    types:
-      - completed
-    branches:
-      - main
+  workflow_call:
 
 jobs:
   webhook:
     # 이미지 빌드 워크플로우가 성공한 경우에만 실행
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -22,12 +16,12 @@ jobs:
           echo "Commit Message: ${{ github.event.workflow_run.head_commit.message }}"
 
       # 2. Jenkins로 웹훅 전달
-      - name: Trigger Jenkins Build with Crumb
+      - name: Trigger Multibranch Scan via Webhook
         run: |
+          set -e
           set +x
-          CRUMB=$(curl -s --user "${{ secrets.JENKINS_USER }}:${{ secrets.JENKINS_API_TOKEN }}" \
-            "${{ secrets.JENKINS_URL }}/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,\":\",//crumb)")
-
-          curl -X POST "${{ secrets.JENKINS_URL }}/job/${{ secrets.JENKINS_JOB }}/buildWithParameters?token=${{ secrets.JENKINS_AUTH_TOKEN }}" \
-            --user "${{ secrets.JENKINS_USER }}:${{ secrets.JENKINS_API_TOKEN }}" \
-            -H "$CRUMB"
+          
+          curl --fail -S -X POST \
+            "${{ secrets.JENKINS_URL }}/multibranch-webhook-trigger/invoke?token=${{ secrets.JENKINS_AUTH_TOKEN }}"
+          
+          echo "✅ Jenkins Multibranch scan triggered successfully using webhook token."

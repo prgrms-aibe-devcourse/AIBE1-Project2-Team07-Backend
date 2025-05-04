@@ -1,4 +1,4 @@
-package org.lucky0111.pettalk.domain.entity;
+package org.lucky0111.pettalk.domain.entity.chat;
 
 import jakarta.persistence.*;
 import lombok.Getter;
