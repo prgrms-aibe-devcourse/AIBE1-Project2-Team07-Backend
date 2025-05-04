@@ -3,11 +3,13 @@ package org.lucky0111.pettalk.domain.entity.trainer;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
 
 import java.time.LocalDate;
 
 @Getter
+@Setter
 @NoArgsConstructor
 @Entity
 @Table(name = "certifications")
