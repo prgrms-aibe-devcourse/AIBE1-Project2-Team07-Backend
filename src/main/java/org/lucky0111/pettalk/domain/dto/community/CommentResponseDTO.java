@@ -6,13 +6,13 @@ import java.util.UUID;
 public record CommentResponseDTO(
         Long commentId,
         Long postId,
-        UUID userId,
         String userName,
         String userNickname,
         String profileImageUrl,
         Long parentCommentId,
         String content,
         List<CommentResponseDTO> replies,
+        int replyCount,
         String createdAt,
         String updatedAt
 ) {}

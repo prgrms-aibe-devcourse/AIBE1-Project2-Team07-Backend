@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.lucky0111.pettalk.domain.common.PetCategory;
+import org.lucky0111.pettalk.domain.common.PostCategory;
 import org.lucky0111.pettalk.domain.dto.community.PostLikeResponseDTO;
 import org.lucky0111.pettalk.domain.dto.community.PostRequestDTO;
 import org.lucky0111.pettalk.domain.dto.community.PostResponseDTO;
@@ -38,14 +40,13 @@ public class PostController {
     @GetMapping
     public ResponseEntity<List<PostResponseDTO>> getAllPosts(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) Long postCategoryId,
-            @RequestParam(required = false) Long petCategoryId,
+            @RequestParam(required = false) PostCategory postCategory,
+            @RequestParam(required = false) PetCategory petCategory,
             HttpServletRequest request) {
-        log.info("게시물 목록 조회 요청: page={}, size={}, postCategoryId={}, petCategoryId={}",
-                page, size, postCategoryId, petCategoryId);
+        log.info("게시물 목록 조회 요청: page={}, postCategoryId={}, petCategoryId={}",
+                page, postCategory, petCategory);
 
-        List<PostResponseDTO> posts = postService.getAllPosts(page, size, postCategoryId, petCategoryId, request);
+        List<PostResponseDTO> posts = postService.getAllPosts(page, postCategory, petCategory);
         return ResponseEntity.ok(posts);
     }
 
@@ -53,11 +54,10 @@ public class PostController {
     @GetMapping("/{postId}")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<PostResponseDTO> getPostById(
-            @PathVariable Long postId,
-            HttpServletRequest request) {
+            @PathVariable Long postId) {
         log.info("게시물 상세 조회 요청: postId={}", postId);
 
-        PostResponseDTO post = postService.getPostById(postId, request);
+        PostResponseDTO post = postService.getPostById(postId);
         return ResponseEntity.ok(post);
     }
 
@@ -65,11 +65,10 @@ public class PostController {
     @PostMapping
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<PostResponseDTO> createPost(
-            @RequestBody PostRequestDTO requestDTO,
-            HttpServletRequest request) {
+            @RequestBody PostRequestDTO requestDTO) {
         log.info("게시물 작성 요청: {}", requestDTO);
 
-        PostResponseDTO createdPost = postService.createPost(requestDTO, request);
+        PostResponseDTO createdPost = postService.createPost(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdPost);
     }
 
@@ -78,11 +77,10 @@ public class PostController {
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<PostResponseDTO> updatePost(
             @PathVariable Long postId,
-            @RequestBody PostUpdateDTO updateDTO,
-            HttpServletRequest request) {
+            @RequestBody PostUpdateDTO updateDTO) {
         log.info("게시물 수정 요청: postId={}, {}", postId, updateDTO);
 
-        PostResponseDTO updatedPost = postService.updatePost(postId, updateDTO, request);
+        PostResponseDTO updatedPost = postService.updatePost(postId, updateDTO);
         return ResponseEntity.ok(updatedPost);
     }
 
@@ -90,11 +88,10 @@ public class PostController {
     @DeleteMapping("/{postId}")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<Void> deletePost(
-            @PathVariable Long postId,
-            HttpServletRequest request) {
+            @PathVariable Long postId) {
         log.info("게시물 삭제 요청: postId={}", postId);
 
-        postService.deletePost(postId, request);
+        postService.deletePost(postId);
         return ResponseEntity.noContent().build();
     }
 
@@ -102,11 +99,10 @@ public class PostController {
     @PostMapping("/{postId}/likes/toggle")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<PostLikeResponseDTO> toggleLike(
-            @PathVariable Long postId,
-            HttpServletRequest request) {
+            @PathVariable Long postId) {
         log.info("게시물 좋아요 토글 요청: postId={}", postId);
 
-        PostLikeResponseDTO response = postService.toggleLike(postId, request);
+        PostLikeResponseDTO response = postService.toggleLike(postId);
         return ResponseEntity.ok(response);
     }
 

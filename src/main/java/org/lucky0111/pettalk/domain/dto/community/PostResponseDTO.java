@@ -1,16 +1,18 @@
 package org.lucky0111.pettalk.domain.dto.community;
 
+import org.lucky0111.pettalk.domain.common.PetCategory;
+import org.lucky0111.pettalk.domain.common.PostCategory;
+
 import java.util.List;
 import java.util.UUID;
 
 public record PostResponseDTO(
         Long postId,
-        UUID userId,
         String userName,
         String userNickname,
         String profileImageUrl,
-        String postCategoryName,
-        String petCategoryName,
+        PostCategory postCategory,
+        PetCategory petCategory,
         String title,
         String content,
         String imageUrl,

@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.dto.community.CommentRequestDTO;
 import org.lucky0111.pettalk.domain.dto.community.CommentResponseDTO;
 import org.lucky0111.pettalk.domain.dto.community.CommentUpdateDTO;
+import org.lucky0111.pettalk.domain.dto.community.CommentsResponseDTO;
 import org.lucky0111.pettalk.service.community.CommentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,13 +35,25 @@ public class CommentController {
     @Operation(summary = "게시물의 댓글 목록 조회", description = "특정 게시물의 댓글 목록을 조회합니다.")
     @GetMapping("/api/v1/posts/{postId}/comments")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<List<CommentResponseDTO>> getCommentsByPostId(
+    public ResponseEntity<CommentsResponseDTO> getCommentsByPostId(
             @PathVariable Long postId,
-            HttpServletRequest request) {
-        log.info("게시물의 댓글 목록 조회 요청: postId={}", postId);
+            @RequestParam(required = false) Long cursor) {
+        log.info("게시물의 댓글 목록 조회 요청: postId={} cursor={}", postId, cursor);
 
-        List<CommentResponseDTO> comments = commentService.getCommentsByPostId(postId, request);
+        CommentsResponseDTO comments = commentService.getCommentsByPostId(postId, cursor);
         return ResponseEntity.ok(comments);
+    }
+
+    @Operation(summary = "댓글의 대댓글 목록 조회", description = "특정 댓글의 대댓글 목록을 조회합니다.")
+    @GetMapping("/api/v1/comments/{commentId}/replies")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<List<CommentResponseDTO>> getRepliesByCommentId(
+            @PathVariable Long commentId,
+            @RequestParam(required = false) Long cursor) {
+        log.info("댓글의 대댓글 목록 조회 요청: commentId={} cursor={}", commentId, cursor);
+
+        List<CommentResponseDTO> replies = commentService.getRepliesByCommentId(commentId, cursor);
+        return ResponseEntity.ok(replies);
     }
 
     @Operation(summary = "댓글 작성", description = "게시물에 새 댓글을 작성합니다.")
@@ -48,18 +61,16 @@ public class CommentController {
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<CommentResponseDTO> createComment(
             @PathVariable Long postId,
-            @RequestBody CommentRequestDTO requestDTO,
-            HttpServletRequest request) {
+            @RequestBody CommentRequestDTO requestDTO) {
         log.info("댓글 작성 요청: postId={}, {}", postId, requestDTO);
 
-        // PathVariable로 받은 postId를 requestDTO에 설정
         CommentRequestDTO updatedRequestDTO = new CommentRequestDTO(
                 postId,
                 requestDTO.parentCommentId(),
                 requestDTO.content()
         );
 
-        CommentResponseDTO createdComment = commentService.createComment(updatedRequestDTO, request);
+        CommentResponseDTO createdComment = commentService.createComment(updatedRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdComment);
     }
 
@@ -68,11 +79,10 @@ public class CommentController {
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<CommentResponseDTO> updateComment(
             @PathVariable Long commentId,
-            @RequestBody CommentUpdateDTO updateDTO,
-            HttpServletRequest request) {
+            @RequestBody CommentUpdateDTO updateDTO) {
         log.info("댓글 수정 요청: commentId={}, {}", commentId, updateDTO);
 
-        CommentResponseDTO updatedComment = commentService.updateComment(commentId, updateDTO, request);
+        CommentResponseDTO updatedComment = commentService.updateComment(commentId, updateDTO);
         return ResponseEntity.ok(updatedComment);
     }
 
@@ -80,11 +90,10 @@ public class CommentController {
     @DeleteMapping("/api/v1/comments/{commentId}")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<Void> deleteComment(
-            @PathVariable Long commentId,
-            HttpServletRequest request) {
+            @PathVariable Long commentId) {
         log.info("댓글 삭제 요청: commentId={}", commentId);
 
-        commentService.deleteComment(commentId, request);
+        commentService.deleteComment(commentId);
         return ResponseEntity.noContent().build();
     }
 }

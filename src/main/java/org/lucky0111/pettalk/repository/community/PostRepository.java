@@ -1,5 +1,7 @@
 package org.lucky0111.pettalk.repository.community;
 
+import org.lucky0111.pettalk.domain.common.PetCategory;
+import org.lucky0111.pettalk.domain.common.PostCategory;
 import org.lucky0111.pettalk.domain.entity.community.Post;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,10 +12,10 @@ import java.util.UUID;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
     // 카테고리별 조회 메서드
-    Page<Post> findByPostCategory_PostCategoryId(Long postCategoryId, Pageable pageable);
-    Page<Post> findByPetCategory_PetCategoryId(Long petCategoryId, Pageable pageable);
-    Page<Post> findByPostCategory_PostCategoryIdAndPetCategory_PetCategoryId(
-            Long postCategoryId, Long petCategoryId, Pageable pageable);
+    Page<Post> findByPostCategory(PostCategory postCategory, Pageable pageable);
+    Page<Post> findByPetCategory(PetCategory petCategory, Pageable pageable);
+    Page<Post> findByPostCategoryAndPetCategory(
+            PostCategory postCategory, PetCategory petCategory, Pageable pageable);
 
     // 사용자별 조회
     List<Post> findByUser_UserId(UUID userId);
