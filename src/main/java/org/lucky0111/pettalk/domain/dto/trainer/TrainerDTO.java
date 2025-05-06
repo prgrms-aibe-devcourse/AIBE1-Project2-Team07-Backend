@@ -14,5 +14,4 @@ public record TrainerDTO(
         List<CertificationDTO> certifications, // Certification 목록
         double averageRating, // Review에서 계산
         long reviewCount // Review에서 계산
-        // ... 필요한 다른 정보
 ) { }
