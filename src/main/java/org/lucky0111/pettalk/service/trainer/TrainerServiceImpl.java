@@ -4,21 +4,14 @@ import com.sun.jdi.request.DuplicateRequestException;
 import lombok.RequiredArgsConstructor;
 import org.lucky0111.pettalk.domain.common.UserRole;
 import org.lucky0111.pettalk.domain.dto.review.ReviewStatsDTO;
-import org.lucky0111.pettalk.domain.dto.trainer.CertificationDTO;
-import org.lucky0111.pettalk.domain.dto.trainer.CertificationRequestDTO;
-import org.lucky0111.pettalk.domain.dto.trainer.TrainerApplicationRequestDTO;
-import org.lucky0111.pettalk.domain.dto.trainer.TrainerDTO;
-import org.lucky0111.pettalk.domain.entity.trainer.Trainer;
+import org.lucky0111.pettalk.domain.dto.trainer.*;
+import org.lucky0111.pettalk.domain.entity.trainer.*;
 import org.lucky0111.pettalk.domain.entity.common.Tag;
-import org.lucky0111.pettalk.domain.entity.trainer.Certification;
-import org.lucky0111.pettalk.domain.entity.trainer.TrainerTagRelation;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.exception.CustomException;
 import org.lucky0111.pettalk.repository.common.TagRepository;
 import org.lucky0111.pettalk.repository.review.ReviewRepository;
-import org.lucky0111.pettalk.repository.trainer.CertificationRepository;
-import org.lucky0111.pettalk.repository.trainer.TrainerRepository;
-import org.lucky0111.pettalk.repository.trainer.TrainerTagRepository;
+import org.lucky0111.pettalk.repository.trainer.*;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.lucky0111.pettalk.service.file.FileUploaderService;
 import org.springframework.http.HttpStatus;
@@ -31,6 +24,7 @@ import org.lucky0111.pettalk.domain.common.UserRole;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,37 +39,51 @@ public class TrainerServiceImpl implements TrainerService {
     private final TagRepository tagRepository;
     private final ReviewRepository reviewRepository;
     private final FileUploaderService fileUploaderService;
+    private final TrainerPhotoRepository trainerPhotoRepository;
+    private final TrainerServiceFeeRepository trainerServiceFeeRepository;
 
     @Override
     public TrainerDTO getTrainerDetails(UUID trainerId) {
         // 1. Trainer 엔티티 조회 (ID는 UUID)
         Trainer trainer = trainerRepository.findById(trainerId)
-                .orElseThrow(() -> new CustomException("Trainer not found with id: %s".formatted(trainerId), HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new CustomException("훈련사 정보를 찾을 수 없습니다 ID: %s".formatted(trainerId), HttpStatus.NOT_FOUND));
 
-        // 2. 연관된 PetUser 엔티티 조회 (Trainer 엔티티에 User user 필드가 있고 @OneToOne 관계로 매핑되었다고 가정)
         PetUser user = trainer.getUser();
 
-        // 3. 자격증 목록 조회 (Trainer ID는 UUID)
+        List<TrainerPhoto> photos = trainer.getPhotos();
+        List<TrainerServiceFee> serviceFees = trainer.getServiceFees();
+
+        List<String> specializationNames = getSpecializationNames(trainerId);
         List<CertificationDTO> certificationDtoList = getCertificationDTOList(trainerId);
 
-        // 4. 전문 분야(태그) 목록 조회 (Trainer ID는 UUID)
-        List<String> specializationNames = getSpecializationNames(trainerId);
+        List<TrainerPhotoDTO> photoDTOs = getPhotosDTO(photos);
+        List<TrainerServiceFeeDTO> serviceFeeDTOs = getServiceFeesDTO(serviceFees);
 
-        // 5. 평점 및 후기 개수 조회 (ReviewRepository 사용, 인자 타입 UUID)
+
         ReviewStatsDTO reviewStatsDTO = getReviewStatsDTO(trainerId);
 
-        // 6. 엔티티 -> DTO (Record) 매핑 및 반환
+
         return new TrainerDTO(
                 trainer.getTrainerId(), // UUID 타입
                 user != null ? user.getNickname() : null,
                 user != null ? user.getProfileImageUrl() : null,
                 user != null ? user.getEmail() : null, // email 필드 추가 (PetUser에 있다고 가정)
+
+                trainer.getTitle(),
                 trainer.getIntroduction(),
+                trainer.getRepresentativeCareer(),
+                trainer.getSpecializationText(),
+                trainer.getVisitingAreas(),
                 trainer.getExperienceYears(),
-                specializationNames, // 태그 이름 목록
+
+                photoDTOs,
+                serviceFeeDTOs,
+
+                specializationNames, // 태그 이름 목록 (리스트 형태)
                 certificationDtoList, // 자격증 DTO 목록
                 reviewStatsDTO.averageRating(),
                 reviewStatsDTO.reviewCount()
+
         );
     }
     private List<CertificationDTO> getCertificationDTOList(UUID trainerId){
@@ -86,6 +94,7 @@ public class TrainerServiceImpl implements TrainerService {
                 .toList();
     }
 
+    // 4. 전문 분야(태그) 목록 조회 (Trainer ID는 UUID)
     private List<String> getSpecializationNames(UUID trainerId){
         List<TrainerTagRelation> trainerTags = trainerTagRepository.findByTrainer_TrainerId(trainerId);
         return trainerTags.stream()
@@ -93,7 +102,7 @@ public class TrainerServiceImpl implements TrainerService {
                 .map(Tag::getTagName) // Tag 엔티티에서 태그 이름을 가져옴
                 .toList();
     }
-
+    // 5. 평점 및 후기 개수 조회 (ReviewRepository 사용, 인자 타입 UUID)
     private ReviewStatsDTO getReviewStatsDTO(UUID trainerId){
         Double averageRating = reviewRepository.findAverageRatingByTrainerId(trainerId);
         Long reviewCount = reviewRepository.countByReviewedTrainerId(trainerId);
@@ -102,6 +111,31 @@ public class TrainerServiceImpl implements TrainerService {
                 averageRating != null ? averageRating : 0.0, // 평균 평점 (NULL일 경우 0.0)
                 reviewCount != null ? reviewCount : 0L  // 후기 개수 (NULL일 경우 0));
         );
+    }
+
+    private List<TrainerPhotoDTO> getPhotosDTO(List<TrainerPhoto> photos){
+        if(photos == null || photos.isEmpty()){
+            return null;
+        }
+        return photos.stream()
+                .map(photo -> new TrainerPhotoDTO(
+                        photo.getFileUrl(),
+                        photo.getPhotoOrder()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    private List<TrainerServiceFeeDTO> getServiceFeesDTO(List<TrainerServiceFee> serviceFees){
+        if(serviceFees == null || serviceFees.isEmpty()){
+            return null;
+        }
+        return serviceFees.stream()
+                .map(fee -> new TrainerServiceFeeDTO(
+                        fee.getServiceType().name(),
+                        fee.getDurationMinutes(),
+                        fee.getFeeAmount()
+                ))
+                .collect(Collectors.toList());
     }
 
 
