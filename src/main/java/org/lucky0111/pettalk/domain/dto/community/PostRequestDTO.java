@@ -10,7 +10,7 @@ public record PostRequestDTO(
         PetCategory petCategory,
         String title,
         String content,
-        String imageUrl,
+        List<String> imageUrls,
         String videoUrl,
         List<Long> tagIds
 ) {}

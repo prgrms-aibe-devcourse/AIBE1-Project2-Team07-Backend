@@ -13,6 +13,7 @@ import org.lucky0111.pettalk.domain.entity.common.Tag;
 import org.lucky0111.pettalk.domain.common.PetCategory;
 import org.lucky0111.pettalk.domain.common.PostCategory;
 import org.lucky0111.pettalk.domain.entity.community.Post;
+import org.lucky0111.pettalk.domain.entity.community.PostImage;
 import org.lucky0111.pettalk.domain.entity.community.PostLike;
 import org.lucky0111.pettalk.domain.entity.community.PostTagRelation;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
@@ -45,6 +46,7 @@ public class PostServiceImpl implements PostService {
     private final CommentRepository commentRepository;
     private final TagRepository tagRepository;
     private final PostTagRepository postTagRepository;
+    private final PostImageRepository postImageRepository;
 
     private static final int PAGE_SIZE = 10;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -56,6 +58,15 @@ public class PostServiceImpl implements PostService {
 
         Post post = buildPostFromRequest(requestDTO, currentUser);
         Post savedPost = postRepository.save(post);
+
+        if (requestDTO.imageUrls() != null) {
+            for (int i = 0; i < requestDTO.imageUrls().size(); i++) {
+                PostImage postImage = new PostImage();
+                postImage.setImageUrl(requestDTO.imageUrls().get(i));
+                postImage.setPost(savedPost);
+                postImageRepository.save(postImage);
+            }
+        }
 
         savePostTags(savedPost, requestDTO.tagIds());
 
@@ -160,7 +171,6 @@ public class PostServiceImpl implements PostService {
         post.setPetCategory(requestDTO.petCategory());
         post.setTitle(requestDTO.title());
         post.setContent(requestDTO.content());
-        post.setImageUrl(requestDTO.imageUrl());
         post.setVideoUrl(requestDTO.videoUrl());
         return post;
     }
@@ -303,10 +313,6 @@ public class PostServiceImpl implements PostService {
             post.setContent(updateDTO.content());
         }
 
-        if (updateDTO.imageUrl() != null) {
-            post.setImageUrl(updateDTO.imageUrl());
-        }
-
         if (updateDTO.videoUrl() != null) {
             post.setVideoUrl(updateDTO.videoUrl());
         }
@@ -325,19 +331,17 @@ public class PostServiceImpl implements PostService {
         }
     }
 
-    // 게시물 관련 데이터 삭제
     private void deletePostRelatedData(Post post) {
         postTagRepository.deleteByPost(post);
         postLikeRepository.deleteByPost(post);
+        postImageRepository.deleteByPost(post);
         commentRepository.deleteByPost(post);
     }
 
-    // 기존 좋아요 찾기
     private Optional<PostLike> findExistingLike(Post post, PetUser user) {
         return postLikeRepository.findByPostAndUser(post, user);
     }
 
-    // 좋아요 취소 처리
     private PostLikeResponseDTO handleLikeRemoval(PostLike existingLike, Post post) {
         postLikeRepository.delete(existingLike);
 
@@ -366,17 +370,14 @@ public class PostServiceImpl implements PostService {
         );
     }
 
-    // 현재 시간 포맷팅
     private String formatCurrentDateTime() {
         return java.time.LocalDateTime.now().format(DATE_FORMATTER);
     }
 
-    // 날짜 시간 포맷팅
     private String formatDateTime(java.time.LocalDateTime dateTime) {
         return dateTime != null ? dateTime.format(DATE_FORMATTER) : null;
     }
 
-    // PostResponseDTO 변환 메소드 (오버로딩 1)
     private PostResponseDTO convertToResponseDTO(Post post, UUID currentUserUUID) {
         int likeCount = countPostLikes(post);
         int commentCount = countPostComments(post);
@@ -390,6 +391,10 @@ public class PostServiceImpl implements PostService {
     private PostResponseDTO buildPostResponse(Post post, UUID currentUserUUID,
                                               int likeCount, int commentCount,
                                               boolean hasLiked, List<String> tags) {
+        List<String> imageUrls = post.getImages().stream()
+                .map(PostImage::getImageUrl)
+                .toList();
+
         String createdAt = formatDateTime(post.getCreatedAt());
         String updatedAt = formatDateTime(post.getUpdatedAt());
 
@@ -402,7 +407,7 @@ public class PostServiceImpl implements PostService {
                 post.getPetCategory(),
                 post.getTitle(),
                 post.getContent(),
-                post.getImageUrl(),
+                imageUrls,
                 post.getVideoUrl(),
                 likeCount,
                 commentCount,
