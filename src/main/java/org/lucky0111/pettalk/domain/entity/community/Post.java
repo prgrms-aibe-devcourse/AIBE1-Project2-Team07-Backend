@@ -15,7 +15,10 @@ import java.util.List;
 @Setter
 @Getter
 @Entity
-@Table(name = "posts")
+@Table(name = "posts", indexes = {
+        @Index(name = "idx_post_title", columnList = "title"),
+        @Index(name = "idx_post_content", columnList = "content")
+})
 @NoArgsConstructor
 public class Post extends BaseTimeEntity {
     @Id

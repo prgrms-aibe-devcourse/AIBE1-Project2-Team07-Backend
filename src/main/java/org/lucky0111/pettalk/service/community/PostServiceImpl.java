@@ -1,9 +1,9 @@
 package org.lucky0111.pettalk.service.community;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.ErrorCode;
+import org.lucky0111.pettalk.domain.common.SortType;
 import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
 import org.lucky0111.pettalk.domain.dto.community.PostLikeResponseDTO;
 import org.lucky0111.pettalk.domain.dto.community.PostRequestDTO;
@@ -75,29 +75,50 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PostResponseDTO> getAllPosts(int page, PostCategory postCategory, PetCategory petCategory) {
+    public List<PostResponseDTO> getAllPosts(int page, PostCategory postCategory, PetCategory petCategory, SortType sortType) {
         UUID currentUserUUID = getCurrentUserUUID();
 
-        Page<Post> postsPage = fetchPostsWithFilters(page, postCategory, petCategory);
-        List<Post> posts = postsPage.getContent();
+        if (sortType != SortType.LIKES) {
+            Page<Post> postsPage = fetchPostsWithFilters(page, postCategory, petCategory, sortType);
+            List<Post> posts = postsPage.getContent();
+            return processPostsToResponses(posts, currentUserUUID);
+        }
 
+        Page<Post> postsPage = fetchPostsWithFilters(page, postCategory, petCategory, sortType);
+        List<Post> posts = postsPage.getContent();
         List<Long> postIds = extractPostIds(posts);
 
         Map<Long, Integer> likeCounts = fetchLikeCountsByPostIds(postIds);
-        Map<Long, Integer> commentCounts = fetchCommentCountsByPostIds(postIds);
-        Map<Long, Boolean> userLikedMap = fetchUserLikeStatusByPostIds(postIds, currentUserUUID);
-        Map<Long, List<String>> postTagsMap = fetchTagsByPostIds(postIds);
 
-        return posts.stream()
-                .map(post -> buildPostResponse(
-                        post,
-                        currentUserUUID,
-                        likeCounts.getOrDefault(post.getPostId(), 0),
-                        commentCounts.getOrDefault(post.getPostId(), 0),
-                        userLikedMap.getOrDefault(post.getPostId(), false),
-                        postTagsMap.getOrDefault(post.getPostId(), new ArrayList<>())
-                ))
-                .collect(Collectors.toList());
+        // 좋아요 수로 정렬
+        posts.sort((p1, p2) -> {
+            Integer count1 = likeCounts.getOrDefault(p1.getPostId(), 0);
+            Integer count2 = likeCounts.getOrDefault(p2.getPostId(), 0);
+            return count2.compareTo(count1); // 내림차순
+        });
+
+        return processPostsToResponses(posts, currentUserUUID);
+    }
+
+
+
+
+    @Transactional(readOnly = true)
+    public List<PostResponseDTO> searchPosts(
+            String keyword, int page, PostCategory postCategory,
+            PetCategory petCategory, SortType sortType) {
+
+        UUID currentUserUUID = getCurrentUserUUID();
+
+        Pageable pageable = PageRequest.of(page, PAGE_SIZE, sortType.getSort());
+
+        Page<Post> postsPage = postRepository.findAll(
+                PostSpecification.withFilters(keyword, postCategory, petCategory),
+                pageable
+        );
+
+        List<Post> posts = postsPage.getContent();
+        return processPostsToResponses(posts, currentUserUUID);
     }
 
     @Override
@@ -163,7 +184,25 @@ public class PostServiceImpl implements PostService {
         }
     }
 
-    // 게시물 생성 및 변환 관련 메소드
+    private List<PostResponseDTO> processPostsToResponses(List<Post> posts, UUID currentUserUUID) {
+        List<Long> postIds = extractPostIds(posts);
+        Map<Long, Integer> likeCounts = fetchLikeCountsByPostIds(postIds);
+        Map<Long, Integer> commentCounts = fetchCommentCountsByPostIds(postIds);
+        Map<Long, Boolean> userLikedMap = fetchUserLikeStatusByPostIds(postIds, currentUserUUID);
+        Map<Long, List<String>> postTagsMap = fetchTagsByPostIds(postIds);
+
+        return posts.stream()
+                .map(post -> buildPostResponse(
+                        post,
+                        currentUserUUID,
+                        likeCounts.getOrDefault(post.getPostId(), 0),
+                        commentCounts.getOrDefault(post.getPostId(), 0),
+                        userLikedMap.getOrDefault(post.getPostId(), false),
+                        postTagsMap.getOrDefault(post.getPostId(), new ArrayList<>())
+                ))
+                .collect(Collectors.toList());
+    }
+
     private Post buildPostFromRequest(PostRequestDTO requestDTO, PetUser user) {
         Post post = new Post();
         post.setUser(user);
@@ -189,34 +228,31 @@ public class PostServiceImpl implements PostService {
         }
     }
 
-    // 게시물 조회 관련 메소드
-    private Page<Post> fetchPostsWithFilters(int page, PostCategory postCategory, PetCategory petCategory) {
-        Pageable pageable = createPageable(page);
+    private Page<Post> fetchPostsWithFilters(int page, PostCategory postCategory, PetCategory petCategory, SortType sortType) {
+        Pageable pageable;
 
-        if (postCategory != null && petCategory != null) {
-            return postRepository.findByPostCategoryAndPetCategory(postCategory, petCategory, pageable);
-        } else if (postCategory != null) {
-            return postRepository.findByPostCategory(postCategory, pageable);
-        } else if (petCategory != null) {
-            return postRepository.findByPetCategory(petCategory, pageable);
+        if (sortType == SortType.LIKES) {
+            pageable = PageRequest.of(page, PAGE_SIZE);
+            return postRepository.findByFiltersOrderByLikes(postCategory, petCategory, pageable);
         } else {
-            return postRepository.findAll(pageable);
+            pageable = PageRequest.of(page, PAGE_SIZE, sortType.getSort());
+            return postRepository.findAll(
+                    PostSpecification.withFilters(postCategory, petCategory),
+                    pageable
+            );
         }
     }
 
-    // 페이지 설정 생성 메소드
     private Pageable createPageable(int page) {
         return PageRequest.of(page, PAGE_SIZE, Sort.by("createdAt").descending());
     }
 
-    // 게시물 ID 목록 추출 메소드
     private List<Long> extractPostIds(List<Post> posts) {
         return posts.stream()
                 .map(Post::getPostId)
                 .collect(Collectors.toList());
     }
 
-    // 좋아요 개수 조회 메소드
     private Map<Long, Integer> fetchLikeCountsByPostIds(List<Long> postIds) {
         return postLikeRepository.countLikesByPostIds(postIds)
                 .stream()
@@ -226,7 +262,6 @@ public class PostServiceImpl implements PostService {
                 ));
     }
 
-    // 댓글 개수 조회 메소드
     private Map<Long, Integer> fetchCommentCountsByPostIds(List<Long> postIds) {
         return commentRepository.countCommentsByPostIds(postIds)
                 .stream()
@@ -236,7 +271,6 @@ public class PostServiceImpl implements PostService {
                 ));
     }
 
-    // 사용자 좋아요 여부 조회 메소드
     private Map<Long, Boolean> fetchUserLikeStatusByPostIds(List<Long> postIds, UUID userId) {
         return postLikeRepository.checkUserLikeStatus(postIds, userId)
                 .stream()
@@ -246,7 +280,6 @@ public class PostServiceImpl implements PostService {
                 ));
     }
 
-    // 태그 조회 메소드
     private Map<Long, List<String>> fetchTagsByPostIds(List<Long> postIds) {
         return postTagRepository.findTagNamesByPostIds(postIds)
                 .stream()
@@ -259,28 +292,23 @@ public class PostServiceImpl implements PostService {
                 ));
     }
 
-    // 게시물 ID로 게시물 찾기
     private Post findPostById(Long postId) {
         return postRepository.findById(postId)
                 .orElseThrow(() -> new CustomException("해당 게시물을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
     }
 
-    // 게시물 좋아요 개수 조회
     private int countPostLikes(Post post) {
         return postLikeRepository.countByPost(post);
     }
 
-    // 게시물 댓글 개수 조회
     private int countPostComments(Post post) {
         return commentRepository.countByPost(post);
     }
 
-    // 사용자 게시물 좋아요 여부 확인
     private boolean checkUserLikedPost(Post post, UUID userId) {
         return postLikeRepository.existsByPostAndUser_UserId(post, userId);
     }
 
-    // 게시물 태그 목록 조회
     private List<String> fetchPostTags(Long postId) {
         return postTagRepository.findTagNamesByPostId(postId)
                 .stream()
@@ -288,14 +316,12 @@ public class PostServiceImpl implements PostService {
                 .collect(Collectors.toList());
     }
 
-    // 게시물 소유권 검증
     private void validatePostOwnership(Post post, UUID userId) {
         if (!post.getUser().getUserId().equals(userId)) {
             throw new CustomException("게시물에 대한 권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
     }
 
-    // 게시물 업데이트
     private void updatePostFromDTO(Post post, PostUpdateDTO updateDTO) {
         if (updateDTO.postCategory() != null) {
             post.setPostCategory(updateDTO.postCategory());
@@ -318,7 +344,6 @@ public class PostServiceImpl implements PostService {
         }
     }
 
-    // 게시물 태그 업데이트
     private void updatePostTags(Post post, List<Long> tagIds) {
         postTagRepository.deleteByPost(post);
 
@@ -353,7 +378,6 @@ public class PostServiceImpl implements PostService {
         );
     }
 
-    // 좋아요 생성 처리
     private PostLikeResponseDTO handleLikeCreation(Post post, PetUser user) {
         PostLike postLike = new PostLike();
         postLike.setPost(post);
@@ -387,7 +411,6 @@ public class PostServiceImpl implements PostService {
         return buildPostResponse(post, currentUserUUID, likeCount, commentCount, hasLiked, tags);
     }
 
-    // PostResponseDTO 변환 및 생성 메소드 (오버로딩 2)
     private PostResponseDTO buildPostResponse(Post post, UUID currentUserUUID,
                                               int likeCount, int commentCount,
                                               boolean hasLiked, List<String> tags) {
@@ -418,7 +441,6 @@ public class PostServiceImpl implements PostService {
         );
     }
 
-    // 현재 사용자 UUID 가져오기
     private UUID getCurrentUserUUID() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -430,7 +452,6 @@ public class PostServiceImpl implements PostService {
         throw new CustomException(ErrorCode.UNAUTHORIZED);
     }
 
-    // 현재 사용자 정보 가져오기
     private PetUser getCurrentUser() {
         UUID currentUserUUID = getCurrentUserUUID();
         return petUserRepository.findById(currentUserUUID)
