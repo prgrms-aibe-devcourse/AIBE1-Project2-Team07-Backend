@@ -1,40 +1,27 @@
 package org.lucky0111.pettalk.service.review;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.lucky0111.pettalk.domain.dto.review.*;
+import org.springframework.http.ResponseEntity;
 
-import java.nio.file.AccessDeniedException;
 import java.util.List;
-import java.util.UUID;
 
 public interface ReviewService {
-    // 리뷰 작성
-    ReviewResponseDTO createReview(ReviewRequestDTO requestDTO, HttpServletRequest request) throws AccessDeniedException;
+    ReviewResponseDTO createReview(ReviewRequestDTO requestDTO);
 
-    // 리뷰 목록 조회
     List<ReviewResponseDTO> getAllReviews();
 
-    // 리뷰 상세 조회
-    ReviewResponseDTO getReviewById(Long reviewId, HttpServletRequest request);
+    ReviewResponseDTO updateReview(Long reviewId, ReviewUpdateDTO updateDTO);
 
-    // 리뷰 수정
-    ReviewResponseDTO updateReview(Long reviewId, ReviewUpdateDTO updateDTO, HttpServletRequest request) throws AccessDeniedException;
+    void deleteReview(Long reviewId);
 
-    // 리뷰 삭제
-    void deleteReview(Long reviewId, HttpServletRequest request) throws AccessDeniedException;
+    List<ReviewResponseDTO> getReviewsByTrainerName(String trainerName);
 
-    // 훈련사 별 리뷰 목록 조회
-    List<ReviewResponseDTO> getReviewsByTrainerId(UUID trainerId, HttpServletRequest request);
+    List<ReviewResponseDTO> getMyReviews();
 
-    // 본인이 작성한 리뷰 리스트 조회
-    List<ReviewResponseDTO> getMyReviews(HttpServletRequest request);
+    List<ReviewResponseDTO> getMyTrainerReviews();
 
-    // 리뷰에 좋아요 추가
-    ReviewLikeResponseDTO addLikeToReview(Long reviewId, HttpServletRequest request);
+    ResponseEntity<?> toggleLikeForReview(Long reviewId);
 
-    // 리뷰에 좋아요 삭제
-    void removeLikeFromReview(Long reviewId, HttpServletRequest request);
+    List<ReviewResponseDTO> getTopLikedReviews(int limit);
 
-    // 리뷰의 좋아요 개수 조회
-    ReviewLikeCountDTO getReviewLikesCount(Long reviewId);
 }
