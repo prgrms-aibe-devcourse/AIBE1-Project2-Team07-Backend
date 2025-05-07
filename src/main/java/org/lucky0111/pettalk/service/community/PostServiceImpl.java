@@ -20,7 +20,6 @@ import org.lucky0111.pettalk.exception.CustomException;
 import org.lucky0111.pettalk.repository.common.TagRepository;
 import org.lucky0111.pettalk.repository.community.*;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
-import org.lucky0111.pettalk.util.error.ExceptionUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -423,13 +422,13 @@ public class PostServiceImpl implements PostService {
             return userDetails.getUserId();
         }
 
-        throw ExceptionUtils.of(ErrorCode.UNAUTHORIZED);
+        throw new CustomException(ErrorCode.UNAUTHORIZED);
     }
 
     // 현재 사용자 정보 가져오기
     private PetUser getCurrentUser() {
         UUID currentUserUUID = getCurrentUserUUID();
         return petUserRepository.findById(currentUserUUID)
-                .orElseThrow(() -> ExceptionUtils.of(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 }

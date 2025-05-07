@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
+import org.lucky0111.pettalk.domain.common.UserRole;
+
 import java.util.UUID;
 
 
@@ -22,9 +24,10 @@ public class PetUser extends BaseTimeEntity {
 
     private String email;
 
-    private String role;
+    @Enumerated(EnumType.STRING)
+    private UserRole role;
 
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     private String nickname;
 
     private String profileImageUrl;

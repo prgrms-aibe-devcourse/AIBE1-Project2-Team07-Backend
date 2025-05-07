@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
-import org.lucky0111.pettalk.domain.common.Status;
+import org.lucky0111.pettalk.domain.common.ApplyStatus;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.domain.entity.trainer.Trainer;
 
@@ -45,5 +45,5 @@ public class UserApply extends BaseTimeEntity {
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
-    private Status status;
+    private ApplyStatus applyStatus;
 }
