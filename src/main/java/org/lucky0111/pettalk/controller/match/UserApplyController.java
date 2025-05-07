@@ -136,6 +136,7 @@ public class UserApplyController {
     @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
     public ResponseEntity<?> getTrainerApplies(
             @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) Status status) {
 
         log.info("{} 트레이너 신청 목록 조회 요청: page={}, size={}, status={}", LOG_PREFIX, page, size, status);

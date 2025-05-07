@@ -10,11 +10,10 @@ import org.lucky0111.pettalk.domain.dto.match.UserApplyResponseDTO;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.domain.entity.trainer.Trainer;
 import org.lucky0111.pettalk.domain.entity.match.UserApply;
+import org.lucky0111.pettalk.exception.CustomException;
 import org.lucky0111.pettalk.repository.match.UserApplyRepository;
 import org.lucky0111.pettalk.repository.trainer.TrainerRepository;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
-import org.lucky0111.pettalk.util.auth.JWTUtil;
-import org.lucky0111.pettalk.util.error.ExceptionUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -45,14 +44,14 @@ public class UserApplyServiceImpl implements UserApplyService {
         PetUser currentUser = getCurrentUser();
 
         Trainer trainer = trainerRepository.findById(requestDTO.trainerId())
-                .orElseThrow(() -> ExceptionUtils.of(ErrorCode.TRAINER_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.APPLY_NOT_FOUND));
 
         if (userApplyRepository.existsByPetUser_userIdAndTrainer_trainerIdAndStatus(
                 currentUser.getUserId(),
                 requestDTO.trainerId(),
                 Status.PENDING
         )) {
-            throw ExceptionUtils.of(ErrorCode.APPLY_ALREADY_EXISTS);
+            throw new CustomException(ErrorCode.APPLY_ALREADY_EXISTS);
         };
 
         UserApply userApply = new UserApply();
@@ -104,12 +103,12 @@ public class UserApplyServiceImpl implements UserApplyService {
         PetUser currentUser = getCurrentUser();
 
         UserApply userApply = userApplyRepository.findByIdWithRelations(applyId)
-                .orElseThrow(() -> ExceptionUtils.of(ErrorCode.APPLY_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.APPLY_NOT_FOUND));
 
         if (!userApply.getTrainer().getTrainerId().equals(currentUser.getUserId())) {
             log.warn("{} 권한 없음: user={}, trainerId={}",
                     LOG_PREFIX, currentUser.getUserId(), userApply.getTrainer().getTrainerId());
-            throw ExceptionUtils.of(ErrorCode.PERMISSION_DENIED);
+            throw new CustomException(ErrorCode.PERMISSION_DENIED);
         }
 
         userApply.setStatus(status);
@@ -127,12 +126,12 @@ public class UserApplyServiceImpl implements UserApplyService {
         PetUser currentUser = getCurrentUser();
 
         UserApply userApply = userApplyRepository.findByIdWithRelations(applyId)
-                .orElseThrow(() -> ExceptionUtils.of(ErrorCode.APPLY_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.APPLY_NOT_FOUND));
 
         if (!userApply.getPetUser().getUserId().equals(currentUser.getUserId())) {
             log.warn("{} 권한 없음: user={}, applyUserId={}",
                     LOG_PREFIX, currentUser.getUserId(), userApply.getPetUser().getUserId());
-            throw ExceptionUtils.of(ErrorCode.PERMISSION_DENIED);
+            throw new CustomException(ErrorCode.PERMISSION_DENIED);
         }
 
         UserApplyResponseDTO responseDTO = convertToResponseDTO(userApply);
@@ -260,13 +259,13 @@ public class UserApplyServiceImpl implements UserApplyService {
         }
 
         log.error("{} 인증 정보를 찾을 수 없음", LOG_PREFIX);
-        throw ExceptionUtils.of(ErrorCode.UNAUTHORIZED);
+        throw new CustomException(ErrorCode.UNAUTHORIZED);
     }
 
     private PetUser getCurrentUser() {
         UUID currentUserUUID = getCurrentUserUUID();
         return petUserRepository.findById(currentUserUUID)
-                .orElseThrow(() -> ExceptionUtils.of(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 
     // UserApply 엔티티를 ResponseDTO로 변환하는 메서드
