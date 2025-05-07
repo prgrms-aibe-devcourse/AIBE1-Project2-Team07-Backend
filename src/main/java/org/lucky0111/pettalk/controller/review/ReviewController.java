@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.dto.review.*;
@@ -57,18 +56,6 @@ public class ReviewController {
         return ResponseEntity.ok(reviews);
     }
 
-    @GetMapping("/{reviewId}")
-    @Operation(
-            summary = "리뷰 상세 조회",
-            description = "특정 ID의 리뷰를 상세 조회합니다. 인증된 사용자만 접근 가능합니다."
-    )
-    @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<ReviewResponseDTO> getReviewById(@PathVariable Long reviewId) {
-        log.info("리뷰 상세 조회 요청: reviewId={}", reviewId);
-        ReviewResponseDTO review = reviewService.getReviewById(reviewId);
-        return ResponseEntity.ok(review);
-    }
-
     @PutMapping("/{reviewId}")
     @Operation(
             summary = "리뷰 수정",
@@ -101,10 +88,10 @@ public class ReviewController {
             description = "특정 훈련사의 리뷰 목록을 조회합니다. 인증된 사용자만 접근 가능합니다."
     )
     @SecurityRequirement(name = "bearerAuth")
-    @GetMapping("/trainers/{trainerId}")
-    public ResponseEntity<List<ReviewResponseDTO>> getReviewsByTrainerId(@PathVariable UUID trainerId) {
-        log.info("훈련사 별 리뷰 목록 조회 요청: trainerId={}", trainerId);
-        List<ReviewResponseDTO> reviews = reviewService.getReviewsByTrainerId(trainerId);
+    @GetMapping("/trainers/{trainerName}")
+    public ResponseEntity<List<ReviewResponseDTO>> getReviewsByTrainerId(@PathVariable String trainerName) {
+        log.info("훈련사 별 리뷰 목록 조회 요청: trainerName={}", trainerName);
+        List<ReviewResponseDTO> reviews = reviewService.getReviewsByTrainerName(trainerName);
         return ResponseEntity.ok(reviews);
     }
 
@@ -121,6 +108,18 @@ public class ReviewController {
     }
 
     @Operation(
+            summary = "내가 받은 리뷰 목록 조회",
+            description = "현재 로그인한 사용자가 받은 리뷰 목록을 조회합니다."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/users/trainer")
+    public ResponseEntity<List<ReviewResponseDTO>> getMyTrainerReviews() {
+        log.info("본인 받은 리뷰 목록 조회 요청");
+        List<ReviewResponseDTO> reviews = reviewService.getMyTrainerReviews();
+        return ResponseEntity.ok(reviews);
+    }
+
+    @Operation(
             summary = "리뷰 좋아요 토글",
             description = "특정 리뷰에 좋아요를 토글(추가/삭제)합니다. 인증된 사용자만 가능합니다."
     )
@@ -131,15 +130,4 @@ public class ReviewController {
         return reviewService.toggleLikeForReview(reviewId);
     }
 
-    @Operation(
-            summary = "리뷰 좋아요 개수 조회",
-            description = "특정 리뷰의 좋아요 개수를 조회합니다."
-    )
-    @SecurityRequirement(name = "bearerAuth")
-    @GetMapping("/{reviewId}/likes/count")
-    public ResponseEntity<ReviewLikeCountDTO> getReviewLikesCount(@PathVariable Long reviewId) {
-        log.info("리뷰 좋아요 개수 조회 요청: reviewId={}", reviewId);
-        ReviewLikeCountDTO likeCount = reviewService.getReviewLikesCount(reviewId);
-        return ResponseEntity.ok(likeCount);
-    }
 }
