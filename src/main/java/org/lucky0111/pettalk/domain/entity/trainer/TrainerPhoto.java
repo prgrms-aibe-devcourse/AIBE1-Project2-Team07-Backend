@@ -1,7 +1,6 @@
 package org.lucky0111.pettalk.domain.entity.trainer;
 
 import jakarta.persistence.*;
-import lombok.Generated;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
