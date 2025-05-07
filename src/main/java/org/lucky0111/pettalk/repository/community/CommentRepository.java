@@ -9,26 +9,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.UUID;
 
 public interface CommentRepository extends JpaRepository<Comment, Long> {
-    int countByPost(Post post);
-
     List<Comment> findByParentComment(Comment parentComment);
 
     List<Comment> findByPostAndParentCommentIsNull(Post post, PageRequest pageRequest);
 
     List<Comment> findByPostAndParentCommentIsNullAndCommentIdGreaterThan(Post post, Long commentId, PageRequest pageRequest);
-
-    @Query("SELECT p.postId as postId, COUNT(c) as commentCount FROM Post p " +
-            "LEFT JOIN Comment c ON c.post = p " +
-            "WHERE p.postId IN :postIds " +
-            "GROUP BY p.postId")
-    List<CommentCountProjection> countCommentsByPostIds(@Param("postIds") List<Long> postIds);
-
-    interface CommentCountProjection {
-        Long getPostId();
-        Integer getCommentCount();
-    }
 
     void deleteByPost(Post post);
 
@@ -51,4 +39,6 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
             @Param("previewIds") List<Long> previewIds,
             @Param("cursor") Long cursor,
             Pageable pageable);
+
+    List<Comment> findByUser_UserId(UUID currentUserUUID);
 }

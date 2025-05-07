@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum PostCategory {
     FREE,
-    QUESTION,
+    QNA,
     TOOL,
     MYPET;
 }
