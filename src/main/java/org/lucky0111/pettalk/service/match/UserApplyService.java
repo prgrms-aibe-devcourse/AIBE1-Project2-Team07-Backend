@@ -1,6 +1,6 @@
 package org.lucky0111.pettalk.service.match;
 
-import org.lucky0111.pettalk.domain.common.Status;
+import org.lucky0111.pettalk.domain.common.ApplyStatus;
 import org.lucky0111.pettalk.domain.dto.match.UserApplyRequestDTO;
 import org.lucky0111.pettalk.domain.dto.match.UserApplyResponseDTO;
 import org.lucky0111.pettalk.domain.entity.match.UserApply;
@@ -14,23 +14,21 @@ public interface UserApplyService {
 
     List<UserApplyResponseDTO> getUserApplies();
 
-    List<UserApplyResponseDTO> getUserAppliesByStatus(Status status);
+    List<UserApplyResponseDTO> getUserAppliesByStatus(ApplyStatus applyStatus);
 
     Page<UserApplyResponseDTO> getUserAppliesPaged(Pageable pageable);
 
-    Page<UserApplyResponseDTO> getUserAppliesByStatusPaged(Status status, Pageable pageable);
+    Page<UserApplyResponseDTO> getUserAppliesByStatusPaged(ApplyStatus applyStatus, Pageable pageable);
 
     List<UserApplyResponseDTO> getTrainerApplies();
 
-    List<UserApplyResponseDTO> getTrainerAppliesByStatus(Status status);
+    List<UserApplyResponseDTO> getTrainerAppliesByStatus(ApplyStatus applyStatus);
 
     Page<UserApplyResponseDTO> getTrainerAppliesPaged(Pageable pageable);
 
-    Page<UserApplyResponseDTO> getTrainerAppliesByStatusPaged(Status status, Pageable pageable);
+    Page<UserApplyResponseDTO> getTrainerAppliesByStatusPaged(ApplyStatus applyStatus, Pageable pageable);
 
-    UserApplyResponseDTO updateApplyStatus(Long applyId, Status status);
+    UserApplyResponseDTO updateApplyStatus(Long applyId, ApplyStatus applyStatus);
 
     UserApplyResponseDTO deleteApply(Long applyId);
-
-    UserApplyResponseDTO convertToResponseDTO(UserApply userApply);
 }

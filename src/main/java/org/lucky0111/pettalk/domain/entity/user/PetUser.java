@@ -24,7 +24,7 @@ public class PetUser extends BaseTimeEntity {
 
     private String role;
 
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     private String nickname;
 
     private String profileImageUrl;

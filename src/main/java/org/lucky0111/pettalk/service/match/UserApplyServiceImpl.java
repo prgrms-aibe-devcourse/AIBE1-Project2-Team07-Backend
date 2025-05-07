@@ -3,7 +3,7 @@ package org.lucky0111.pettalk.service.match;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.ErrorCode;
-import org.lucky0111.pettalk.domain.common.Status;
+import org.lucky0111.pettalk.domain.common.ApplyStatus;
 import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
 import org.lucky0111.pettalk.domain.dto.match.UserApplyRequestDTO;
 import org.lucky0111.pettalk.domain.dto.match.UserApplyResponseDTO;
@@ -35,35 +35,17 @@ public class UserApplyServiceImpl implements UserApplyService {
     private final PetUserRepository petUserRepository;
     private final TrainerRepository trainerRepository;
 
-    private static final String LOG_PREFIX = "[UserApplyService]";
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Override
     @Transactional
     public UserApplyResponseDTO createApply(UserApplyRequestDTO requestDTO) {
         PetUser currentUser = getCurrentUser();
+        Trainer trainer = findTrainerByName(requestDTO.trainerName());
 
-        Trainer trainer = trainerRepository.findById(requestDTO.trainerId())
-                .orElseThrow(() -> new CustomException(ErrorCode.APPLY_NOT_FOUND));
+        validateNoPendingApply(currentUser.getUserId(), trainer.getTrainerId());
 
-        if (userApplyRepository.existsByPetUser_userIdAndTrainer_trainerIdAndStatus(
-                currentUser.getUserId(),
-                requestDTO.trainerId(),
-                Status.PENDING
-        )) {
-            throw new CustomException(ErrorCode.APPLY_ALREADY_EXISTS);
-        };
-
-        UserApply userApply = new UserApply();
-        userApply.setPetUser(currentUser);
-        userApply.setTrainer(trainer);
-        userApply.setPetType(requestDTO.petType());
-        userApply.setPetBreed(requestDTO.petBreed());
-        userApply.setPetMonthAge(requestDTO.petMonthAge());
-        userApply.setContent(requestDTO.content());
-        userApply.setImageUrl(requestDTO.imageUrl());
-        userApply.setStatus(Status.PENDING);
-
+        UserApply userApply = buildUserApplyFromRequest(requestDTO, currentUser, trainer);
         UserApply savedApply = userApplyRepository.save(userApply);
 
         return convertToResponseDTO(savedApply);
@@ -73,47 +55,28 @@ public class UserApplyServiceImpl implements UserApplyService {
     @Transactional(readOnly = true)
     public List<UserApplyResponseDTO> getUserApplies() {
         PetUser currentUser = getCurrentUser();
-
         List<UserApply> userApplies = userApplyRepository.findByPetUser_UserIdWithRelations(currentUser.getUserId());
-        log.info("{} 조회된 신청 수: {}", LOG_PREFIX, userApplies.size());
-
-        // DTO 변환 및 반환
-        return userApplies.stream()
-                .map(this::convertToResponseDTO)
-                .collect(Collectors.toList());
+        return convertToResponseDTOList(userApplies);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<UserApplyResponseDTO> getTrainerApplies() {
         PetUser currentUser = getCurrentUser();
-
         List<UserApply> trainerApplies = userApplyRepository.findByTrainer_TrainerId(currentUser.getUserId());
-
-        return trainerApplies.stream()
-                .map(this::convertToResponseDTO)
-                .collect(Collectors.toList());
+        return convertToResponseDTOList(trainerApplies);
     }
 
     @Override
     @Transactional
-    public UserApplyResponseDTO updateApplyStatus(Long applyId, Status status) {
-        log.info("{} 매칭 신청 상태 업데이트: applyId={}, status={}", LOG_PREFIX, applyId, status);
-
+    public UserApplyResponseDTO updateApplyStatus(Long applyId, ApplyStatus applyStatus) {
         PetUser currentUser = getCurrentUser();
+        UserApply userApply = findApplyById(applyId);
 
-        UserApply userApply = userApplyRepository.findByIdWithRelations(applyId)
-                .orElseThrow(() -> new CustomException(ErrorCode.APPLY_NOT_FOUND));
+        validateTrainerPermission(userApply, currentUser.getUserId());
 
-        if (!userApply.getTrainer().getTrainerId().equals(currentUser.getUserId())) {
-            log.warn("{} 권한 없음: user={}, trainerId={}",
-                    LOG_PREFIX, currentUser.getUserId(), userApply.getTrainer().getTrainerId());
-            throw new CustomException(ErrorCode.PERMISSION_DENIED);
-        }
-
-        userApply.setStatus(status);
+        userApply.setApplyStatus(applyStatus);
         UserApply updatedApply = userApplyRepository.save(userApply);
-        log.info("{} 상태 업데이트 완료: applyId={}, status={}", LOG_PREFIX, applyId, status);
 
         return convertToResponseDTO(updatedApply);
     }
@@ -121,133 +84,125 @@ public class UserApplyServiceImpl implements UserApplyService {
     @Override
     @Transactional
     public UserApplyResponseDTO deleteApply(Long applyId) {
-        log.info("{} 매칭 신청 삭제 요청: applyId={}", LOG_PREFIX, applyId);
-
         PetUser currentUser = getCurrentUser();
+        UserApply userApply = findApplyById(applyId);
 
-        UserApply userApply = userApplyRepository.findByIdWithRelations(applyId)
-                .orElseThrow(() -> new CustomException(ErrorCode.APPLY_NOT_FOUND));
-
-        if (!userApply.getPetUser().getUserId().equals(currentUser.getUserId())) {
-            log.warn("{} 권한 없음: user={}, applyUserId={}",
-                    LOG_PREFIX, currentUser.getUserId(), userApply.getPetUser().getUserId());
-            throw new CustomException(ErrorCode.PERMISSION_DENIED);
-        }
+        validateUserPermission(userApply, currentUser.getUserId());
 
         UserApplyResponseDTO responseDTO = convertToResponseDTO(userApply);
-
         userApplyRepository.delete(userApply);
-        log.info("{} 매칭 신청 삭제 완료: applyId={}", LOG_PREFIX, applyId);
 
         return responseDTO;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserApplyResponseDTO> getUserAppliesByStatus(Status status) {
-        log.info("{} 사용자 상태별 매칭 신청 목록 조회: status={}", LOG_PREFIX, status);
-
-        // 현재 사용자 정보 가져오기
+    public List<UserApplyResponseDTO> getUserAppliesByStatus(ApplyStatus applyStatus) {
         PetUser currentUser = getCurrentUser();
+        List<UserApply> userApplies = userApplyRepository.findByPetUser_UserIdAndApplyStatusWithRelations(
+                currentUser.getUserId(), applyStatus);
 
-        // 최적화된 쿼리로 사용자의 상태별 신청 목록 조회
-        List<UserApply> userApplies = userApplyRepository.findByPetUser_UserIdAndStatusWithRelations(
-                currentUser.getUserId(), status);
-        log.info("{} 조회된 신청 수: {}", LOG_PREFIX, userApplies.size());
-
-        // DTO 변환 및 반환
-        return userApplies.stream()
-                .map(this::convertToResponseDTO)
-                .collect(Collectors.toList());
+        return convertToResponseDTOList(userApplies);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<UserApplyResponseDTO> getUserAppliesPaged(Pageable pageable) {
-        log.info("{} 사용자 매칭 신청 목록 페이징 조회: page={}, size={}",
-                LOG_PREFIX, pageable.getPageNumber(), pageable.getPageSize());
-
-        // 현재 사용자 정보 가져오기
         PetUser currentUser = getCurrentUser();
-
-        // 페이징 처리된 쿼리로 사용자의 신청 목록 조회
         Page<UserApply> userAppliesPage = userApplyRepository.findByPetUser_UserIdWithRelationsPaged(
                 currentUser.getUserId(), pageable);
 
-        // DTO 변환 및 반환
         return userAppliesPage.map(this::convertToResponseDTO);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<UserApplyResponseDTO> getUserAppliesByStatusPaged(Status status, Pageable pageable) {
-        log.info("{} 사용자 상태별 매칭 신청 목록 페이징 조회: status={}, page={}, size={}",
-                LOG_PREFIX, status, pageable.getPageNumber(), pageable.getPageSize());
-
-        // 현재 사용자 정보 가져오기
+    public Page<UserApplyResponseDTO> getUserAppliesByStatusPaged(ApplyStatus applyStatus, Pageable pageable) {
         PetUser currentUser = getCurrentUser();
-
-        // 상태별 페이징 처리된 쿼리 수행
-        // (이 메서드는 UserApplyRepository에 추가해야 함)
         Page<UserApply> userAppliesPage = userApplyRepository.findByPetUser_UserIdAndStatusWithRelationsPaged(
-                currentUser.getUserId(), status, pageable);
+                currentUser.getUserId(), applyStatus, pageable);
 
-        // DTO 변환 및 반환
         return userAppliesPage.map(this::convertToResponseDTO);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserApplyResponseDTO> getTrainerAppliesByStatus(Status status) {
-        log.info("{} 트레이너 상태별 매칭 신청 목록 조회: status={}", LOG_PREFIX, status);
-
-        // 현재 트레이너 정보 가져오기
+    public List<UserApplyResponseDTO> getTrainerAppliesByStatus(ApplyStatus applyStatus) {
         PetUser currentUser = getCurrentUser();
+        List<UserApply> trainerApplies = userApplyRepository.findByTrainer_TrainerIdAndApplyStatusWithRelations(
+                currentUser.getUserId(), applyStatus);
 
-        // 최적화된 쿼리로 트레이너의 상태별 신청 목록 조회
-        List<UserApply> trainerApplies = userApplyRepository.findByTrainer_TrainerIdAndStatusWithRelations(
-                currentUser.getUserId(), status);
-        log.info("{} 조회된 신청 수: {}", LOG_PREFIX, trainerApplies.size());
-
-        // DTO 변환 및 반환
-        return trainerApplies.stream()
-                .map(this::convertToResponseDTO)
-                .collect(Collectors.toList());
+        return convertToResponseDTOList(trainerApplies);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<UserApplyResponseDTO> getTrainerAppliesPaged(Pageable pageable) {
-        log.info("{} 트레이너 매칭 신청 목록 페이징 조회: page={}, size={}",
-                LOG_PREFIX, pageable.getPageNumber(), pageable.getPageSize());
-
-        // 현재 트레이너 정보 가져오기
         PetUser currentUser = getCurrentUser();
-
-        // 페이징 처리된 쿼리로 트레이너의 신청 목록 조회
         Page<UserApply> trainerAppliesPage = userApplyRepository.findByTrainer_TrainerIdWithRelationsPaged(
                 currentUser.getUserId(), pageable);
 
-        // DTO 변환 및 반환
         return trainerAppliesPage.map(this::convertToResponseDTO);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<UserApplyResponseDTO> getTrainerAppliesByStatusPaged(Status status, Pageable pageable) {
-        log.info("{} 트레이너 상태별 매칭 신청 목록 페이징 조회: status={}, page={}, size={}",
-                LOG_PREFIX, status, pageable.getPageNumber(), pageable.getPageSize());
-
-        // 현재 트레이너 정보 가져오기
+    public Page<UserApplyResponseDTO> getTrainerAppliesByStatusPaged(ApplyStatus applyStatus, Pageable pageable) {
         PetUser currentUser = getCurrentUser();
-
-        // 상태별 페이징 처리된 쿼리 수행
-        // (이 메서드는 UserApplyRepository에 추가해야 함)
         Page<UserApply> trainerAppliesPage = userApplyRepository.findByTrainer_TrainerIdAndStatusWithRelationsPaged(
-                currentUser.getUserId(), status, pageable);
+                currentUser.getUserId(), applyStatus, pageable);
 
-        // DTO 변환 및 반환
         return trainerAppliesPage.map(this::convertToResponseDTO);
+    }
+
+    // 리팩토링된 private 메소드들
+
+    private UserApply buildUserApplyFromRequest(UserApplyRequestDTO requestDTO, PetUser petUser, Trainer trainer) {
+        UserApply userApply = new UserApply();
+        userApply.setPetUser(petUser);
+        userApply.setTrainer(trainer);
+        userApply.setPetType(requestDTO.petType());
+        userApply.setPetBreed(requestDTO.petBreed());
+        userApply.setPetMonthAge(requestDTO.petMonthAge());
+        userApply.setContent(requestDTO.content());
+        userApply.setImageUrl(requestDTO.imageUrl());
+        userApply.setApplyStatus(ApplyStatus.PENDING);
+        return userApply;
+    }
+
+    private void validateNoPendingApply(UUID userId, UUID trainerId) {
+        if (userApplyRepository.existsByPetUser_userIdAndTrainer_trainerIdAndApplyStatus(
+                userId, trainerId, ApplyStatus.PENDING)) {
+            throw new CustomException(ErrorCode.APPLY_ALREADY_EXISTS);
+        }
+    }
+
+    private Trainer findTrainerByName(String trainerName) {
+        return trainerRepository.findByUser_Nickname(trainerName)
+                .orElseThrow(() -> new CustomException(ErrorCode.APPLY_NOT_FOUND));
+    }
+
+    private UserApply findApplyById(Long applyId) {
+        return userApplyRepository.findByIdWithRelations(applyId)
+                .orElseThrow(() -> new CustomException(ErrorCode.APPLY_NOT_FOUND));
+    }
+
+    private void validateTrainerPermission(UserApply userApply, UUID currentUserId) {
+        if (!userApply.getTrainer().getTrainerId().equals(currentUserId)) {
+            throw new CustomException(ErrorCode.PERMISSION_DENIED);
+        }
+    }
+
+    private void validateUserPermission(UserApply userApply, UUID currentUserId) {
+        if (!userApply.getPetUser().getUserId().equals(currentUserId)) {
+            throw new CustomException(ErrorCode.PERMISSION_DENIED);
+        }
+    }
+
+    private List<UserApplyResponseDTO> convertToResponseDTOList(List<UserApply> userApplies) {
+        return userApplies.stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
     }
 
     private UUID getCurrentUserUUID() {
@@ -258,7 +213,6 @@ public class UserApplyServiceImpl implements UserApplyService {
             return userDetails.getUserId();
         }
 
-        log.error("{} 인증 정보를 찾을 수 없음", LOG_PREFIX);
         throw new CustomException(ErrorCode.UNAUTHORIZED);
     }
 
@@ -268,32 +222,26 @@ public class UserApplyServiceImpl implements UserApplyService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 
-    // UserApply 엔티티를 ResponseDTO로 변환하는 메서드
-    public UserApplyResponseDTO convertToResponseDTO(UserApply userApply) {
-        String createdAtStr = userApply.getCreatedAt() != null ?
-                userApply.getCreatedAt().format(DATE_FORMATTER) : null;
+    private UserApplyResponseDTO convertToResponseDTO(UserApply userApply) {
+        String createdAtStr = formatDateTime(userApply.getCreatedAt());
+        String updatedAtStr = formatDateTime(userApply.getUpdatedAt());
 
-        String updatedAtStr = userApply.getUpdatedAt() != null ?
-                userApply.getUpdatedAt().format(DATE_FORMATTER) : null;
-
-        // DTO 생성 및 반환
         return new UserApplyResponseDTO(
                 userApply.getApplyId(),
-                userApply.getPetUser().getUserId(),
                 userApply.getPetUser().getName(),
-                userApply.getTrainer().getTrainerId(),
                 userApply.getTrainer().getUser().getName(),
                 userApply.getPetType(),
                 userApply.getPetBreed(),
                 userApply.getPetMonthAge(),
                 userApply.getContent(),
                 userApply.getImageUrl(),
-                userApply.getStatus(),
+                userApply.getApplyStatus(),
                 createdAtStr,
                 updatedAtStr
         );
     }
 
-
-
+    private String formatDateTime(java.time.LocalDateTime dateTime) {
+        return dateTime != null ? dateTime.format(DATE_FORMATTER) : null;
+    }
 }
