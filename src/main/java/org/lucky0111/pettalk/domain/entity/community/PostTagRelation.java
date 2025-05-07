@@ -2,8 +2,10 @@ package org.lucky0111.pettalk.domain.entity.community;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.Setter;
 import org.lucky0111.pettalk.domain.entity.common.Tag;
 
+@Setter
 @Getter
 @Entity
 @Table(name = "post_tags", uniqueConstraints = {

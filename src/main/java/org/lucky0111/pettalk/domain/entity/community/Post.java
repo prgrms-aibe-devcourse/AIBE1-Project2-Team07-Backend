@@ -3,11 +3,13 @@ package org.lucky0111.pettalk.domain.entity.community;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
-import org.lucky0111.pettalk.domain.entity.common.PetCategory;
+import org.lucky0111.pettalk.domain.common.PetCategory;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
-import org.lucky0111.pettalk.domain.entity.common.PostCategory;
+import org.lucky0111.pettalk.domain.common.PostCategory;
 
+@Setter
 @Getter
 @Entity
 @Table(name = "posts")
@@ -17,12 +19,12 @@ public class Post extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long postId;
 
-    @ManyToOne
-    @JoinColumn(name = "post_category_id")
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private PostCategory postCategory;
 
-    @ManyToOne
-    @JoinColumn(name = "pet_category_id")
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private PetCategory petCategory;
 
     @ManyToOne
