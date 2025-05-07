@@ -33,11 +33,7 @@ public class JWTFilter extends OncePerRequestFilter {
             "/api/v1/auth/register",
             "/",
             "/swagger-ui/",
-            "/v3/api-docs/",
-            "/swagger-resources/",
-            "/swagger-ui.html",
-            "/webjars/",
-            "/api-docs/"
+            "/v3/api-docs/"
     );
 
     // 토큰 자동 갱신을 위한 임계값 (초)
@@ -50,7 +46,6 @@ public class JWTFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         // Skip filter for excluded paths
-        logger.info("doFilterStart");
         String path = request.getRequestURI();
 
         if (shouldSkipFilter(path)) {
