@@ -4,7 +4,7 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.lucky0111.pettalk.domain.common.Status;
+import org.lucky0111.pettalk.domain.common.ApplyStatus;
 import org.lucky0111.pettalk.domain.dto.review.*;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.domain.entity.match.UserApply;
@@ -52,7 +52,7 @@ public class ReviewServiceImpl implements ReviewService {
             throw new AccessDeniedException("리뷰를 작성할 권한이 없습니다.");
         }
 
-        if (userApply.getStatus() != Status.APPROVED) {
+        if (userApply.getApplyStatus() != ApplyStatus.APPROVED) {
             throw new IllegalStateException("승인된 신청에 대해서만 리뷰를 작성할 수 있습니다.");
         }
 

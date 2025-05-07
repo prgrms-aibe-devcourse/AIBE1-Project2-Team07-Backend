@@ -5,10 +5,8 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum Status {
-    PENDING("PENDING"),
-    APPROVED("APPROVED"),
-    REJECTED("REJECTED");
-
-    private final String description;
+public enum ApplyStatus {
+    PENDING,
+    APPROVED,
+    REJECTED;
 }

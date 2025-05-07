@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
-import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -12,7 +11,7 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.lucky0111.pettalk.domain.common.Status;
+import org.lucky0111.pettalk.domain.common.ApplyStatus;
 import org.lucky0111.pettalk.domain.dto.match.UserApplyRequestDTO;
 import org.lucky0111.pettalk.domain.dto.match.UserApplyResponseDTO;
 import org.lucky0111.pettalk.service.match.UserApplyService;
@@ -41,10 +40,8 @@ import java.util.Map;
         description = "JWT Bearer token"
 )
 public class UserApplyController {
-
     private final UserApplyService userApplyService;
-    private static final String LOG_PREFIX = "[UserApplyController]";
-    private static final int size = 10;
+    private static final int PAGE_SIZE = 10;
 
     @PostMapping
     @Operation(
@@ -53,17 +50,15 @@ public class UserApplyController {
             security = @SecurityRequirement(name = "bearerAuth"),
             responses = {
                     @ApiResponse(responseCode = "201", description = "신청서 생성 성공"),
-                    @ApiResponse(responseCode = "400", description = "잘못된 요청"),
-                    @ApiResponse(responseCode = "401", description = "인증 실패"),
-                    @ApiResponse(responseCode = "409", description = "이미 진행 중인 신청 존재")
             }
     )
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<UserApplyResponseDTO> createApply(@RequestBody UserApplyRequestDTO requestDTO) {
-        log.info("{} 신청서 제출 요청: trainerId={}", LOG_PREFIX, requestDTO.trainerId());
+        log.info("신청서 제출 요청: trainerId={}", requestDTO.trainerName());
         UserApplyResponseDTO responseDTO = userApplyService.createApply(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
+
 
     @GetMapping("/user")
     @Operation(
@@ -72,19 +67,17 @@ public class UserApplyController {
             security = @SecurityRequirement(name = "bearerAuth"),
             parameters = {
                     @Parameter(name = "page", description = "페이지 번호(0부터 시작)", in = ParameterIn.QUERY),
-                    @Parameter(name = "size", description = "페이지 크기", in = ParameterIn.QUERY),
-                    @Parameter(name = "status", description = "상태 필터", in = ParameterIn.QUERY, schema = @Schema(implementation = Status.class))
+                    @Parameter(name = "applyStatus", description = "상태 필터", in = ParameterIn.QUERY, schema = @Schema(implementation = ApplyStatus.class))
             }
     )
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<?> getUserApplies(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) Status status) {
+            @RequestParam(required = false) ApplyStatus applyStatus) {
 
-        log.info("{} 사용자 신청 목록 조회 요청: page={}, size={}, status={}", LOG_PREFIX, page, size, status);
+        log.info("사용자 신청 목록 조회 요청: page={}, size={}, status={}", page, PAGE_SIZE, applyStatus);
 
-        if (page < 0 || size <= 0) {
+        if (page < 0 || PAGE_SIZE <= 0) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", "잘못된 페이지 매개변수입니다."
@@ -92,10 +85,10 @@ public class UserApplyController {
         }
 
         // 페이징 처리 여부에 따라 다른 메서드 호출
-        if (page == 0 && size >= 100) {
+        if (page == 0 && PAGE_SIZE >= 100) {
             // 페이징 없이 전체 목록 반환
-            List<UserApplyResponseDTO> responseDTOs = status != null
-                    ? userApplyService.getUserAppliesByStatus(status)
+            List<UserApplyResponseDTO> responseDTOs = applyStatus != null
+                    ? userApplyService.getUserAppliesByStatus(applyStatus)
                     : userApplyService.getUserApplies();
 
             return ResponseEntity.ok(Map.of(
@@ -105,9 +98,9 @@ public class UserApplyController {
             ));
         } else {
             // 페이징 처리하여 결과 반환
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-            Page<UserApplyResponseDTO> pagedResult = status != null
-                    ? userApplyService.getUserAppliesByStatusPaged(status, pageable)
+            Pageable pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("createdAt").descending());
+            Page<UserApplyResponseDTO> pagedResult = applyStatus != null
+                    ? userApplyService.getUserAppliesByStatusPaged(applyStatus, pageable)
                     : userApplyService.getUserAppliesPaged(pageable);
 
             return ResponseEntity.ok(Map.of(
@@ -128,19 +121,18 @@ public class UserApplyController {
             security = @SecurityRequirement(name = "bearerAuth"),
             parameters = {
                     @Parameter(name = "page", description = "페이지 번호(0부터 시작)", in = ParameterIn.QUERY),
-                    @Parameter(name = "size", description = "페이지 크기", in = ParameterIn.QUERY),
-                    @Parameter(name = "status", description = "상태 필터", in = ParameterIn.QUERY, schema = @Schema(implementation = Status.class))
+                    @Parameter(name = "applyStatus", description = "상태 필터", in = ParameterIn.QUERY, schema = @Schema(implementation = ApplyStatus.class))
             }
     )
     @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority('TRAINER', 'ADMIN')")
     public ResponseEntity<?> getTrainerApplies(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(required = false) Status status) {
+            @RequestParam(required = false) ApplyStatus applyStatus) {
 
-        log.info("{} 트레이너 신청 목록 조회 요청: page={}, size={}, status={}", LOG_PREFIX, page, size, status);
+        log.info("트레이너 신청 목록 조회 요청: page={}, size={}, status={}", page, PAGE_SIZE, applyStatus);
 
-        if (page < 0 || size <= 0) {
+        if (page < 0 || PAGE_SIZE <= 0) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", "잘못된 페이지 매개변수입니다."
@@ -148,10 +140,10 @@ public class UserApplyController {
         }
 
         // 페이징 처리 여부에 따라 다른 메서드 호출
-        if (page == 0 && size >= 100) {
+        if (page == 0 && PAGE_SIZE >= 100) {
             // 페이징 없이 전체 목록 반환
-            List<UserApplyResponseDTO> responseDTOs = status != null
-                    ? userApplyService.getTrainerAppliesByStatus(status)
+            List<UserApplyResponseDTO> responseDTOs = applyStatus != null
+                    ? userApplyService.getTrainerAppliesByStatus(applyStatus)
                     : userApplyService.getTrainerApplies();
 
             return ResponseEntity.ok(Map.of(
@@ -161,9 +153,9 @@ public class UserApplyController {
             ));
         } else {
             // 페이징 처리하여 결과 반환
-            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-            Page<UserApplyResponseDTO> pagedResult = status != null
-                    ? userApplyService.getTrainerAppliesByStatusPaged(status, pageable)
+            Pageable pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("createdAt").descending());
+            Page<UserApplyResponseDTO> pagedResult = applyStatus != null
+                    ? userApplyService.getTrainerAppliesByStatusPaged(applyStatus, pageable)
                     : userApplyService.getTrainerAppliesPaged(pageable);
 
             return ResponseEntity.ok(Map.of(
@@ -187,14 +179,14 @@ public class UserApplyController {
     @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
     public ResponseEntity<?> updateApplyStatus(
             @PathVariable Long applyId,
-            @RequestBody Status statusRequest) {
+            @RequestBody ApplyStatus applyStatusRequest) {
 
-        log.info("{} 신청 상태 업데이트 요청: applyId={}, status={}", LOG_PREFIX, applyId, statusRequest);
+        log.info("신청 상태 업데이트 요청: applyId={}, status={}", applyId, applyStatusRequest);
 
         // 상태 유효성 검사
-        Status status;
+        ApplyStatus applyStatus;
         try {
-            status = statusRequest;
+            applyStatus = applyStatusRequest;
         } catch (IllegalArgumentException | NullPointerException e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
@@ -203,7 +195,7 @@ public class UserApplyController {
         }
 
         // 상태 업데이트 서비스 호출
-        UserApplyResponseDTO responseDTO = userApplyService.updateApplyStatus(applyId, status);
+        UserApplyResponseDTO responseDTO = userApplyService.updateApplyStatus(applyId, applyStatus);
 
         return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -220,7 +212,7 @@ public class UserApplyController {
     )
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<?> deleteApply(@PathVariable Long applyId) {
-        log.info("{} 신청 삭제 요청: applyId={}", LOG_PREFIX, applyId);
+        log.info("신청 삭제 요청: applyId={}", applyId);
 
         UserApplyResponseDTO responseDTO = userApplyService.deleteApply(applyId);
 

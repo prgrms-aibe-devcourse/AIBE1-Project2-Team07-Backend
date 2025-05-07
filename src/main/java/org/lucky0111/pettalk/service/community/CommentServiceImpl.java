@@ -16,7 +16,6 @@ import org.lucky0111.pettalk.exception.CustomException;
 import org.lucky0111.pettalk.repository.community.CommentRepository;
 import org.lucky0111.pettalk.repository.community.PostRepository;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
-import org.lucky0111.pettalk.util.error.ExceptionUtils;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -278,13 +277,13 @@ public class CommentServiceImpl implements CommentService {
             return userDetails.getUserId();
         }
 
-        throw ExceptionUtils.of(ErrorCode.UNAUTHORIZED);
+        throw new CustomException(ErrorCode.UNAUTHORIZED);
     }
 
     // 현재 사용자 정보 가져오기
     private PetUser getCurrentUser() {
         UUID currentUserUUID = getCurrentUserUUID();
         return petUserRepository.findById(currentUserUUID)
-                .orElseThrow(() -> ExceptionUtils.of(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 }
