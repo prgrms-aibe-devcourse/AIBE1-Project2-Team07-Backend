@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.lucky0111.pettalk.domain.common.UserRole;
 import org.lucky0111.pettalk.domain.dto.auth.*;
 import org.lucky0111.pettalk.domain.dto.user.ProfileUpdateDTO;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
@@ -109,7 +110,7 @@ public class AuthController {
                 petUser.setName(registrationDTO.name());
                 petUser.setNickname(registrationDTO.nickname());
                 petUser.setProfileImageUrl(registrationDTO.profileImageUrl());
-                petUser.setRole("ROLE_USER");
+                petUser.setRole(UserRole.USER);
                 petUser.setStatus("ACTIVE");
 
                 log.info("새 사용자 정보 생성: {}, {}, {}",

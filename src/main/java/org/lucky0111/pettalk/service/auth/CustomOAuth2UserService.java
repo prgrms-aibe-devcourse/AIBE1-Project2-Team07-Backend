@@ -78,7 +78,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             }
             else {
                 System.out.println("기존 사용자 정보: " + existData.getUserId() + ", " + existData.getRole());
-                userDTO = new UserDTO(existData.getRole(), existData.getName(), provider, socialId, existData.getUserId(), existData.getEmail());
+                userDTO = new UserDTO(existData.getRole().name(), existData.getName(), provider, socialId, existData.getUserId(), existData.getEmail());
             }
 
             // 이메일 정보를 포함하여 CustomOAuth2User 생성
