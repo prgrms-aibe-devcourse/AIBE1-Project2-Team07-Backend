@@ -8,21 +8,22 @@ public class NaverOAuth2UserInfo implements OAuth2UserInfo {
     private final Map<String, Object> attributes;
     private final String accessToken;
     private final String id;
-    private final String nickName;
+    private final String email;
+    private final String name;
 
     public NaverOAuth2UserInfo(String registrationId, String accessToken, Map<String, Object> attributes) {
-        Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
-        Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
+        Map<String, Object> naverResponse = (Map<String, Object>) attributes.get("response");
 
-        this.id = attributes.get("id").toString();
         this.accessToken = accessToken;
         this.attributes = attributes;
-        this.nickName = profile.get("nickname").toString();
+        this.id = naverResponse.get("id").toString();
+        this.email = naverResponse.get("email").toString();
+        this.name = naverResponse.get("name").toString();
     }
 
     @Override
     public OAuth2Provider getProvider() {
-        return OAuth2Provider.KAKAO;
+        return OAuth2Provider.NAVER;
     }
 
     @Override
@@ -42,17 +43,17 @@ public class NaverOAuth2UserInfo implements OAuth2UserInfo {
 
     @Override
     public String getEmail() {
-        return null;
+        return email;
     }
 
     @Override
     public String getName() {
-        return null;
+        return name;
     }
 
     @Override
     public String getNickname() {
-        return nickName;
+        return null;
     }
 
     @Override

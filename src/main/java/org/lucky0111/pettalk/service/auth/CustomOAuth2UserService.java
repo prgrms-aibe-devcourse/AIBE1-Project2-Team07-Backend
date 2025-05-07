@@ -45,6 +45,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     }
 
     private PetUser findOrSaveUser(String username, String email, OAuth2Provider oAuth2Provider) {
+        // TODO: 유저 저장 기준을 이메일로 하고 있음. socialId로 변경 시 소셜 서비스별 계정 생성 가능
         return userRepository.findByEmail(email)
                 .orElseGet(() -> createUser(username, email, oAuth2Provider));
     }
