@@ -9,6 +9,9 @@ import org.lucky0111.pettalk.domain.common.PetCategory;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.domain.common.PostCategory;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Setter
 @Getter
 @Entity
@@ -33,6 +36,18 @@ public class Post extends BaseTimeEntity {
 
     private String title;
     private String content;
-    private String imageUrl;
     private String videoUrl;
+
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PostImage> images = new ArrayList<>();
+
+    public void addImage(PostImage image) {
+        this.images.add(image);
+        image.setPost(this);
+    }
+
+    public void removeImage(PostImage image) {
+        this.images.remove(image);
+        image.setPost(null);
+    }
 }

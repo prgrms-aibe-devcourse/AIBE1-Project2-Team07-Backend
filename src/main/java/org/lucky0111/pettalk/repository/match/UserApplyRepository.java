@@ -1,8 +1,6 @@
 package org.lucky0111.pettalk.repository.match;
 
-import org.lucky0111.pettalk.domain.common.Status;
-import org.lucky0111.pettalk.domain.entity.user.PetUser;
-import org.lucky0111.pettalk.domain.entity.trainer.Trainer;
+import org.lucky0111.pettalk.domain.common.ApplyStatus;
 import org.lucky0111.pettalk.domain.entity.match.UserApply;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,7 +15,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 public interface UserApplyRepository extends JpaRepository<UserApply, Long> {
-    boolean existsByPetUser_userIdAndTrainer_trainerIdAndStatus(UUID petUserId, UUID trainerId, Status status);
+    boolean existsByPetUser_userIdAndTrainer_trainerIdAndApplyStatus(UUID petUserId, UUID trainerId, ApplyStatus applyStatus);
 
     List<UserApply> findByTrainer_TrainerId(UUID trainerTrainerId);
 
@@ -49,7 +47,7 @@ public interface UserApplyRepository extends JpaRepository<UserApply, Long> {
     /**
      * 사용자 ID로 해당 사용자의 모든 신청서를 상태별로 필터링하여 관련 엔티티와 함께 조회
      * @param userId 사용자 ID
-     * @param status 신청 상태
+     * @param applyStatus 신청 상태
      * @return 신청서 목록
      */
     @Query("SELECT ua FROM UserApply ua " +
@@ -57,11 +55,11 @@ public interface UserApplyRepository extends JpaRepository<UserApply, Long> {
             "JOIN FETCH ua.trainer t " +
             "JOIN FETCH t.user " +
             "WHERE ua.petUser.userId = :userId " +
-            "AND ua.status = :status " +
+            "AND ua.applyStatus = :status " +
             "ORDER BY ua.createdAt DESC")
-    List<UserApply> findByPetUser_UserIdAndStatusWithRelations(
+    List<UserApply> findByPetUser_UserIdAndApplyStatusWithRelations(
             @Param("userId") UUID userId,
-            @Param("status") Status status);
+            @Param("status") ApplyStatus applyStatus);
 
     /**
      * 트레이너 ID로 해당 트레이너에게 온 모든 신청서를 관련 엔티티와 함께 조회
@@ -79,7 +77,7 @@ public interface UserApplyRepository extends JpaRepository<UserApply, Long> {
     /**
      * 트레이너 ID로 해당 트레이너에게 온 모든 신청서를 상태별로 필터링하여 관련 엔티티와 함께 조회
      * @param trainerId 트레이너 ID
-     * @param status 신청 상태
+     * @param applyStatus 신청 상태
      * @return 신청서 목록
      */
     @Query("SELECT ua FROM UserApply ua " +
@@ -87,11 +85,11 @@ public interface UserApplyRepository extends JpaRepository<UserApply, Long> {
             "JOIN FETCH ua.trainer t " +
             "JOIN FETCH t.user " +
             "WHERE t.trainerId = :trainerId " +
-            "AND ua.status = :status " +
+            "AND ua.applyStatus = :status " +
             "ORDER BY ua.createdAt DESC")
-    List<UserApply> findByTrainer_TrainerIdAndStatusWithRelations(
+    List<UserApply> findByTrainer_TrainerIdAndApplyStatusWithRelations(
             @Param("trainerId") UUID trainerId,
-            @Param("status") Status status);
+            @Param("status") ApplyStatus applyStatus);
 
     /**
      * 사용자 ID로 해당 사용자의 모든 신청서를 페이징 처리하여 관련 엔티티와 함께 조회
@@ -139,7 +137,7 @@ public interface UserApplyRepository extends JpaRepository<UserApply, Long> {
     /**
      * 사용자 ID와 상태로 해당 사용자의 상태별 신청서를 페이징 처리하여 관련 엔티티와 함께 조회
      * @param userId 사용자 ID
-     * @param status 신청 상태
+     * @param applyStatus 신청 상태
      * @param pageable 페이징 정보
      * @return 페이징된 신청서 목록
      */
@@ -148,18 +146,18 @@ public interface UserApplyRepository extends JpaRepository<UserApply, Long> {
             "JOIN FETCH ua.trainer t " +
             "JOIN FETCH t.user " +
             "WHERE ua.petUser.userId = :userId " +
-            "AND ua.status = :status",
+            "AND ua.applyStatus = :status",
             countQuery = "SELECT COUNT(ua) FROM UserApply ua " +
-                    "WHERE ua.petUser.userId = :userId AND ua.status = :status")
+                    "WHERE ua.petUser.userId = :userId AND ua.applyStatus = :status")
     Page<UserApply> findByPetUser_UserIdAndStatusWithRelationsPaged(
             @Param("userId") UUID userId,
-            @Param("status") Status status,
+            @Param("status") ApplyStatus applyStatus,
             Pageable pageable);
 
     /**
      * 트레이너 ID와 상태로 해당 트레이너에게 온 상태별 신청서를 페이징 처리하여 관련 엔티티와 함께 조회
      * @param trainerId 트레이너 ID
-     * @param status 신청 상태
+     * @param applyStatus 신청 상태
      * @param pageable 페이징 정보
      * @return 페이징된 신청서 목록
      */
@@ -168,12 +166,12 @@ public interface UserApplyRepository extends JpaRepository<UserApply, Long> {
             "JOIN FETCH ua.trainer t " +
             "JOIN FETCH t.user " +
             "WHERE t.trainerId = :trainerId " +
-            "AND ua.status = :status",
+            "AND ua.applyStatus = :status",
             countQuery = "SELECT COUNT(ua) FROM UserApply ua " +
-                    "JOIN ua.trainer t WHERE t.trainerId = :trainerId AND ua.status = :status")
+                    "JOIN ua.trainer t WHERE t.trainerId = :trainerId AND ua.applyStatus = :status")
     Page<UserApply> findByTrainer_TrainerIdAndStatusWithRelationsPaged(
             @Param("trainerId") UUID trainerId,
-            @Param("status") Status status,
+            @Param("status") ApplyStatus applyStatus,
             Pageable pageable);
 
     /**

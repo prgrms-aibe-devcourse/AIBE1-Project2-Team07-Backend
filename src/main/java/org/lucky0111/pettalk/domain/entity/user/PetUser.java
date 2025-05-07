@@ -27,7 +27,7 @@ public class PetUser extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     private String nickname;
 
     private String profileImageUrl;

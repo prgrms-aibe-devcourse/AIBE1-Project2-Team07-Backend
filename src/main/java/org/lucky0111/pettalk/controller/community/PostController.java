@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ import java.util.List;
         bearerFormat = "JWT",
         description = "JWT Bearer token"
 )
+@Tag(name = "게시물 API", description = "게시물 관련 API 엔드포인트")
 public class PostController {
 
     private final PostService postService;
