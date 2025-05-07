@@ -128,6 +128,7 @@ public class JWTFilter extends OncePerRequestFilter {
 //                });
     }
 
+
     private String extractToken(HttpServletRequest request) {
         // Try to get token from Authorization header first
         String bearerToken = request.getHeader("Authorization");

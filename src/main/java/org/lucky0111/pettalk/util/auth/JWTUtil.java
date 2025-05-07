@@ -1,124 +1,135 @@
 package org.lucky0111.pettalk.util.auth;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import jakarta.transaction.Transactional;
+import io.jsonwebtoken.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.lucky0111.pettalk.domain.dto.auth.OAuthTempTokenDTO;
-import org.lucky0111.pettalk.domain.dto.auth.TokenDTO;
-import org.lucky0111.pettalk.domain.entity.user.PetUser;
-import org.lucky0111.pettalk.domain.entity.auth.RefreshToken;
-import org.lucky0111.pettalk.repository.auth.RefreshTokenRepository;
-import org.lucky0111.pettalk.repository.user.PetUserRepository;
-import org.springframework.beans.factory.annotation.Value;
+import org.lucky0111.pettalk.config.auth.JWTConfig;
+import org.lucky0111.pettalk.domain.common.TokenType;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.Base64;
+import java.time.Instant;
 import java.util.Date;
-import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
-/**
- * JWT 서비스를 위한 파사드 클래스
- * 기존 코드와의 호환성을 위해 유지
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class JWTUtil {
+    private final JWTConfig jwtConfig;
 
-    private final JWTTokenProvider tokenProvider;
-    private final JWTTokenManager tokenManager;
+    /**
+     * JWT 토큰을 생성합니다.
+     */
+    public String createJwt(TokenType tokenType, UUID userId, List<String> roles) {
+        try {
+            Instant now = Instant.now();
+            Date expirationDate = getExpirationDate(tokenType);
 
-    // JWTTokenProvider에 위임
-    public String getProvider(String token) {
-        return tokenProvider.getProvider(token);
+            String token = Jwts.builder()
+                    .claim("userId", userId.toString())
+                    .claim("roles", roles)
+                    .claim("type", tokenType.toString().toLowerCase())
+                    .issuedAt(Date.from(now))
+                    .expiration(expirationDate)
+                    .signWith(jwtConfig.getSecretKey())
+                    .compact();
+
+            log.info("JWT 토큰 생성 성공");
+            return token;
+        } catch (Exception e) {
+            log.error("JWT 토큰 생성 중 오류 발생: {}", e.getMessage());
+            return null;
+        }
     }
 
-    // JWTTokenProvider에 위임
-    public String getSocialId(String token) {
-        return tokenProvider.getSocialId(token);
+    private Date getExpirationDate(TokenType tokenType) {
+        return switch (tokenType) {
+            case ACCESS -> Date.from(Instant.now().plusMillis(jwtConfig.getAccessTokenExpiresIn()));
+            case REFRESH -> Date.from(Instant.now().plusMillis(jwtConfig.getRefreshTokenExpiresIn()));
+        };
     }
 
-    // JWTTokenProvider에 위임
-    public String getRole(String token) {
-        return tokenProvider.getRole(token);
+    /**
+     * 토큰에서 claims을 추출합니다.
+     */
+    public Claims extractAllClaims(String token) throws JwtException, IllegalArgumentException {
+        return Jwts.parser()
+                .verifyWith(jwtConfig.getSecretKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
-    // JWTTokenProvider에 위임
-    public UUID getUserId(String token) {
-        return tokenProvider.getUserId(token);
+    /**
+     * 토큰 유효성 검사
+     */
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parser().verifyWith(jwtConfig.getSecretKey()).build().parseSignedClaims(token);
+            return true;
+        } catch (SecurityException | MalformedJwtException e) {
+            log.info("Token Invalid: {}", e.getMessage());
+        } catch (ExpiredJwtException e) {
+            log.info("Token Expired: {}", e.getMessage());
+        } catch (UnsupportedJwtException e) {
+            log.info("Token Unsupported: {}", e.getMessage());
+        } catch (IllegalArgumentException e) {
+            log.info("Token Illegal Argument: {}", e.getMessage());
+        }
+
+        return false;
     }
 
-    // JWTTokenProvider에 위임
-    public String getEmail(String token) {
-        return tokenProvider.getEmail(token);
+    /**
+     * 토큰이 만료되었는지 확인합니다.
+     */
+    public boolean isExpired(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+            if (claims == null) return true;
+
+            return claims.getExpiration().before(new Date());
+        } catch (Exception e) {
+            log.error("토큰 만료 확인 중 오류 발생: {}", e.getMessage());
+            return true;
+        }
     }
 
-    // JWTTokenProvider에 위임
-    public Boolean isExpired(String token) {
-        return tokenProvider.isExpired(token);
-    }
-
-    // JWTTokenProvider에 위임
+    /**
+     * 토큰의 남은 만료 시간을 초 단위로 반환합니다.
+     */
     public long getExpiresIn(String token) {
-        return tokenProvider.getExpiresIn(token);
+        try {
+            Claims claims = extractAllClaims(token);
+            if (claims == null) return 0;
+
+            Date expiration = claims.getExpiration();
+            Instant now = Instant.now();
+            Date nowDate = Date.from(now);
+
+            long diff = expiration.getTime() - nowDate.getTime();
+            return Math.max(0, diff / 1000);
+        } catch (Exception e) {
+            log.error("토큰 만료 시간 계산 중 오류 발생: {}", e.getMessage());
+            return 0;
+        }
     }
 
-    // JWTTokenProvider에 위임
-    public String createJwt(String provider, String socialId, UUID userId, String role, Long expiredMs) {
-        return tokenProvider.createJwt(provider, socialId, userId, role, expiredMs);
+    /**
+     * 토큰에서 role을 추출합니다.
+     */
+    public String getRole(String token) {
+        Claims claims = extractAllClaims(token);
+        return claims.get("role", String.class);
     }
 
-    // JWTTokenProvider에 위임
-    public String createJwtWithEmail(String provider, String socialId, UUID userId, String role, String email, Long expiredMs) {
-        return tokenProvider.createJwtWithEmail(provider, socialId, userId, role, email, expiredMs);
-    }
-
-    // JWTTokenProvider에 위임
-    public String createTempToken(String provider, String providerId, String email, String name, Long expiredMs) {
-        return tokenProvider.createTempToken(provider, providerId, email, name, expiredMs);
-    }
-
-    // JWTTokenManager에 위임
-    public OAuthTempTokenDTO getTempTokenInfo(String token) {
-        return tokenManager.getTempTokenInfo(token);
-    }
-
-    // JWTTokenManager에 위임
-    public String generateRefreshToken(PetUser user) {
-        return tokenManager.generateRefreshToken(user);
-    }
-
-    // JWTTokenManager에 위임
-    public TokenDTO generateTokenPair(PetUser user) {
-        return tokenManager.generateTokenPair(user);
-    }
-
-    // JWTTokenManager에 위임
-    public Optional<TokenDTO> refreshAccessToken(String refreshToken) {
-        return tokenManager.refreshAccessToken(refreshToken);
-    }
-
-    // JWTTokenManager에 위임
-    public boolean revokeRefreshToken(String refreshToken) {
-        return tokenManager.revokeRefreshToken(refreshToken);
-    }
-
-    // JWTTokenManager에 위임
-    public void revokeAllUserTokens(UUID userId) {
-        tokenManager.revokeAllUserTokens(userId);
-    }
-
-    // JWTTokenManager에 위임
-    public void removeExpiredTokens() {
-        tokenManager.removeExpiredTokens();
+    /**
+     * 토큰에서 userId를 추출합니다.
+     */
+    public UUID getUserId(String token) {
+        Claims claims = extractAllClaims(token);
+        String userIdStr = claims.get("userId", String.class);
+        return UUID.fromString(userIdStr);
     }
 }
