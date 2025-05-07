@@ -14,7 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -128,6 +127,19 @@ public class ReviewController {
     public ResponseEntity<?> toggleReviewLike(@PathVariable Long reviewId) {
         log.info("리뷰 좋아요 토글 요청: reviewId={}", reviewId);
         return reviewService.toggleLikeForReview(reviewId);
+    }
+
+    @Operation(
+            summary = "좋아요 상위 리뷰 목록 조회",
+            description = "좋아요 개수가 가장 많은 리뷰를 상위 9개까지 조회합니다."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/top-liked")
+    public ResponseEntity<List<ReviewResponseDTO>> getTopLikedReviews(
+            @RequestParam(defaultValue = "9") int limit) {
+        log.info("좋아요 상위 리뷰 목록 조회 요청: limit={}", limit);
+        List<ReviewResponseDTO> reviews = reviewService.getTopLikedReviews(limit);
+        return ResponseEntity.ok(reviews);
     }
 
 }

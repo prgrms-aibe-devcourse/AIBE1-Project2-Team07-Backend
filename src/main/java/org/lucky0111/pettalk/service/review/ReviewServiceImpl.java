@@ -1,6 +1,5 @@
 package org.lucky0111.pettalk.service.review;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.ApplyStatus;
@@ -18,6 +17,8 @@ import org.lucky0111.pettalk.repository.review.ReviewLikeRepository;
 import org.lucky0111.pettalk.repository.review.ReviewRepository;
 import org.lucky0111.pettalk.repository.trainer.TrainerRepository;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -27,10 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -116,9 +114,10 @@ public class ReviewServiceImpl implements ReviewService {
 
         List<Review> reviews = reviewRepository.findByUserApply_PetUser_UserId(currentUserUUID);
 
-        return reviews.stream()
-                .map(review -> convertToResponseDTO(review, currentUserUUID))
-                .collect(Collectors.toList());
+        Map<Long, Integer> likeCounts = getLikeCountsMap(reviews);
+        Map<Long, Boolean> userLikedMap = getUserLikedStatusMap(reviews, currentUserUUID);
+
+        return convertToResponseDTOList(reviews, likeCounts, userLikedMap);
     }
 
     @Override
@@ -128,9 +127,10 @@ public class ReviewServiceImpl implements ReviewService {
 
         List<Review> reviews = reviewRepository.findByUserApply_Trainer_TrainerId(currentUserUUID);
 
-        return reviews.stream()
-                .map(review -> convertToResponseDTO(review, currentUserUUID))
-                .collect(Collectors.toList());
+        Map<Long, Integer> likeCounts = getLikeCountsMap(reviews);
+        Map<Long, Boolean> userLikedMap = getUserLikedStatusMap(reviews, currentUserUUID);
+
+        return convertToResponseDTOList(reviews, likeCounts, userLikedMap);
     }
 
     @Override
@@ -146,6 +146,26 @@ public class ReviewServiceImpl implements ReviewService {
         } else {
             return handleAddLike(review, currentUser);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ReviewResponseDTO> getTopLikedReviews(int limit) {
+        UUID currentUserUUID = getCurrentUserUUID();
+
+        List<Long> topReviewIds = findTopReviewIdsByLikeCount(limit);
+        if (topReviewIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Review> reviews = fetchReviewsWithRelations(topReviewIds);
+
+        sortReviewsByLikeCount(reviews, topReviewIds);
+
+        Map<Long, Integer> likeCounts = getLikeCountsMap(reviews);
+        Map<Long, Boolean> userLikedMap = getUserLikedStatusMap(reviews, currentUserUUID);
+
+        return convertToResponseDTOList(reviews, likeCounts, userLikedMap);
     }
 
     private Review buildReviewFromRequest(ReviewRequestDTO requestDTO, UserApply userApply) {
@@ -280,6 +300,29 @@ public class ReviewServiceImpl implements ReviewService {
                 currentUser.getUserId(),
                 createdAt
         );
+    }
+
+    private List<Long> findTopReviewIdsByLikeCount(int limit) {
+        Pageable pageable = PageRequest.of(0, limit);
+        return reviewLikeRepository.findTopLikedReviewIds(pageable).stream()
+                .map(ReviewLikeRepository.ReviewLikeCountProjection::getReviewId)
+                .collect(Collectors.toList());
+    }
+
+    // 리뷰 및 관련 데이터 조회
+    private List<Review> fetchReviewsWithRelations(List<Long> reviewIds) {
+        return reviewRepository.findAllByIdWithRelations(reviewIds);
+    }
+
+    // 좋아요 순서대로 정렬
+    private void sortReviewsByLikeCount(List<Review> reviews, List<Long> orderedReviewIds) {
+        Map<Long, Integer> reviewIdToIndex = new HashMap<>();
+        for (int i = 0; i < orderedReviewIds.size(); i++) {
+            reviewIdToIndex.put(orderedReviewIds.get(i), i);
+        }
+
+        reviews.sort(Comparator.comparing(review ->
+                reviewIdToIndex.getOrDefault(review.getReviewId(), Integer.MAX_VALUE)));
     }
 
     private String formatCurrentDateTime() {
