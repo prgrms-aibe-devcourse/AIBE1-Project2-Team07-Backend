@@ -14,7 +14,6 @@ import org.lucky0111.pettalk.domain.entity.match.UserApply;
         @Index(name = "idx_review_apply", columnList = "apply_id"),
         @Index(name = "idx_review_rating", columnList = "rating")
 })
-@AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor
 public class Review extends BaseTimeEntity {
     @Id
