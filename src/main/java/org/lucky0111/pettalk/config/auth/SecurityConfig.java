@@ -35,7 +35,6 @@ public class SecurityConfig {
     private String frontUrl;
 
     public SecurityConfig(CustomOAuth2UserService customOAuth2UserService, CustomSuccessHandler customSuccessHandler, JWTUtil jwtUtil) {
-
         this.customOAuth2UserService = customOAuth2UserService;
         this.customSuccessHandler = customSuccessHandler;
         this.jwtUtil = jwtUtil;
@@ -86,12 +85,13 @@ public class SecurityConfig {
 
                 //경로별 인가 작업
                 .authorizeHttpRequests((auth) -> auth
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api/v1/auth/register",
-                                "/api/v1/auth/check-nickname", "/api/v1/auth/refresh", "/").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**",
+                                "/swagger-ui.html", "/webjars/**", "/api-docs/**", "/api/v1/auth/register",
+                                "/api/v1/auth/check-nickname", "/api/v1/auth/refresh").permitAll()
 //                        .requestMatchers("/api/v1/auth/user-info", "/api/v1/auth/logout",
 //                                "/api/v1/auth/withdraw", "/api/v1/auth/profile",
 //                                "/api/v1/auth/token/validate", "/my").authenticated()
-                        .anyRequest().permitAll())
+                        .anyRequest().authenticated())
 
                 //세션 설정 : STATELESS
                 .sessionManagement((session) -> session
