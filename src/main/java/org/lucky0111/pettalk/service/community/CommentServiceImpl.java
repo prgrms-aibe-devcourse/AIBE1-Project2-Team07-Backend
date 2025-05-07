@@ -5,10 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.ErrorCode;
 import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
-import org.lucky0111.pettalk.domain.dto.community.CommentRequestDTO;
-import org.lucky0111.pettalk.domain.dto.community.CommentResponseDTO;
-import org.lucky0111.pettalk.domain.dto.community.CommentUpdateDTO;
-import org.lucky0111.pettalk.domain.dto.community.CommentsResponseDTO;
+import org.lucky0111.pettalk.domain.dto.community.*;
 import org.lucky0111.pettalk.domain.entity.community.Comment;
 import org.lucky0111.pettalk.domain.entity.community.Post;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
@@ -42,13 +39,16 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     @Transactional
-    public CommentResponseDTO createComment(CommentRequestDTO requestDTO) {
+    public CommentResponseDTO createComment(Long postId, CommentRequestDTO requestDTO) {
         PetUser currentUser = getCurrentUser();
-        Post post = findPostById(requestDTO.postId());
+        Post post = findPostById(postId);
         Comment parentComment = findParentCommentIfExists(requestDTO.parentCommentId());
 
         Comment comment = buildComment(post, currentUser, parentComment, requestDTO.content());
         Comment savedComment = commentRepository.save(comment);
+
+        post.incrementCommentCount();
+        postRepository.save(post);
 
         return convertToResponseDTO(savedComment);
     }
@@ -94,24 +94,36 @@ public class CommentServiceImpl implements CommentService {
     public void deleteComment(Long commentId) {
         UUID currentUserUUID = getCurrentUserUUID();
         Comment comment = findCommentById(commentId);
+        Post post = comment.getPost();
+
+        post.decrementCommentCount();
+        postRepository.save(post);
 
         validateCommentOwnership(comment, currentUserUUID);
         handleCommentDeletion(comment);
     }
 
-    // 게시물 조회 관련 메소드
+    @Override
+    @Transactional(readOnly = true)
+    public List<MyCommentResponseDTO> getMyComments() {
+        UUID currentUserUUID = getCurrentUserUUID();
+        List<Comment> comments = commentRepository.findByUser_UserId(currentUserUUID);
+
+        return comments.stream()
+                .map(this::buildMyCommentResponse)
+                .collect(Collectors.toList());
+    }
+
     private Post findPostById(Long postId) {
         return postRepository.findById(postId)
                 .orElseThrow(() -> new CustomException("해당 게시물을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
     }
 
-    // 댓글 조회 관련 메소드
     private Comment findCommentById(Long commentId) {
         return commentRepository.findById(commentId)
                 .orElseThrow(() -> new CustomException("해당 댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
     }
 
-    // 부모 댓글 조회 메소드
     private Comment findParentCommentIfExists(Long parentCommentId) {
         if (parentCommentId == null) {
             return null;
@@ -127,7 +139,6 @@ public class CommentServiceImpl implements CommentService {
         return parentComment;
     }
 
-    // 댓글 생성 관련 메소드
     private Comment buildComment(Post post, PetUser user, Comment parentComment, String content) {
         Comment comment = new Comment();
         comment.setPost(post);
@@ -135,6 +146,23 @@ public class CommentServiceImpl implements CommentService {
         comment.setParentComment(parentComment);
         comment.setContent(content);
         return comment;
+    }
+
+    private MyCommentResponseDTO buildMyCommentResponse(Comment comment) {
+        Post post = comment.getPost();
+
+        String createdAt = formatDateTime(comment.getCreatedAt());
+        String updatedAt = formatDateTime(comment.getUpdatedAt());
+
+        return new MyCommentResponseDTO(
+                post.getPostId(),
+                comment.getCommentId(),
+                post.getTitle(),
+                post.getContent(),
+                comment.getContent(),
+                createdAt,
+                updatedAt
+        );
     }
 
     private List<Comment> fetchRootComments(Post post, Long cursor) {
@@ -147,7 +175,6 @@ public class CommentServiceImpl implements CommentService {
         }
     }
 
-    // 댓글 더 있는지 확인 메소드
     private boolean hasMoreComments(List<Comment> comments) {
         return comments.size() == COMMENT_LIMIT;
     }
@@ -159,7 +186,6 @@ public class CommentServiceImpl implements CommentService {
         return null;
     }
 
-    // 미리보기 답글 ID 목록 가져오기
     private List<Long> getPreviewReplyIds(Comment parentComment) {
         List<Comment> previewReplies = commentRepository.findTop3ByParentCommentOrderByCreatedAtAsc(parentComment);
         return previewReplies.stream()
@@ -167,7 +193,6 @@ public class CommentServiceImpl implements CommentService {
                 .collect(Collectors.toList());
     }
 
-    // 나머지 답글 가져오기
     private List<Comment> fetchRemainingReplies(Comment parentComment, List<Long> previewIds, Long cursor) {
         if (cursor == null) {
             return commentRepository.findRemainingRepliesByParentComment(
@@ -178,21 +203,18 @@ public class CommentServiceImpl implements CommentService {
         }
     }
 
-    // 댓글 목록을 ResponseDTO 목록으로 변환
     private List<CommentResponseDTO> convertCommentsToResponseDTOs(List<Comment> comments) {
         return comments.stream()
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
     }
 
-    // 루트 댓글 목록에 답글 정보를 추가하여 ResponseDTO 목록 생성
     private List<CommentResponseDTO> buildCommentResponsesWithReplies(List<Comment> rootComments) {
         return rootComments.stream()
                 .map(this::buildCommentWithReplies)
                 .collect(Collectors.toList());
     }
 
-    // 단일 댓글에 답글 정보 추가하여 ResponseDTO 생성
     private CommentResponseDTO buildCommentWithReplies(Comment comment) {
         List<Comment> previewReplies = commentRepository.findTop3ByParentCommentOrderByCreatedAtAsc(comment);
         List<CommentResponseDTO> replyDtos = convertCommentsToResponseDTOs(previewReplies);
@@ -215,14 +237,12 @@ public class CommentServiceImpl implements CommentService {
         );
     }
 
-    // 댓글 소유권 검증
     private void validateCommentOwnership(Comment comment, UUID userUUID) {
         if (!comment.getUser().getUserId().equals(userUUID)) {
             throw new CustomException("댓글에 대한 권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
     }
 
-    // 댓글 삭제 처리
     private void handleCommentDeletion(Comment comment) {
         List<Comment> replies = commentRepository.findByParentComment(comment);
 
@@ -236,7 +256,6 @@ public class CommentServiceImpl implements CommentService {
         }
     }
 
-    // 댓글을 ResponseDTO로 변환
     private CommentResponseDTO convertToResponseDTO(Comment comment) {
         String createdAt = formatDateTime(comment.getCreatedAt());
         String updatedAt = formatDateTime(comment.getUpdatedAt());
@@ -257,18 +276,15 @@ public class CommentServiceImpl implements CommentService {
         );
     }
 
-    // 날짜 시간 포맷팅
     private String formatDateTime(java.time.LocalDateTime dateTime) {
         return dateTime != null ? dateTime.format(DATE_FORMATTER) : null;
     }
 
-    // 부모 댓글 ID 가져오기
     private Long getParentCommentId(Comment comment) {
         return comment.getParentComment() != null ?
                 comment.getParentComment().getCommentId() : null;
     }
 
-    // 현재 사용자 UUID 가져오기
     private UUID getCurrentUserUUID() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -280,7 +296,6 @@ public class CommentServiceImpl implements CommentService {
         throw new CustomException(ErrorCode.UNAUTHORIZED);
     }
 
-    // 현재 사용자 정보 가져오기
     private PetUser getCurrentUser() {
         UUID currentUserUUID = getCurrentUserUUID();
         return petUserRepository.findById(currentUserUUID)

@@ -5,6 +5,5 @@ import java.util.UUID;
 public record PostLikeResponseDTO(
         Long likeId,
         Long postId,
-        String createdAt,
         Boolean liked
 ) {}
