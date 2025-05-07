@@ -52,10 +52,10 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private PetUser createUser(String socialId, String email, OAuth2Provider oAuth2Provider) {
         PetUser user = new PetUser();
         user.setName("임시사용자");
-        user.setNickname(UUID.randomUUID().toString());
+        user.setNickname("임시사용자_" + UUID.randomUUID());
         user.setSocialId(socialId);
         user.setEmail(email);
-        user.setRole(UserRole.USER);
+        user.setRole(UserRole.GUEST);
         user.setProvider(oAuth2Provider.getRegistrationId());
         user.setProfileImageUrl(""); // TODO: 기본 프사 이미지 URL로 수정 필요
         user.setStatus(AccountStatus.ACTIVE.toString());

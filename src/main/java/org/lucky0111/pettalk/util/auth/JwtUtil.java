@@ -16,7 +16,7 @@ import java.util.UUID;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class JWTUtil {
+public class JwtUtil {
     private final JWTConfig jwtConfig;
 
     /**
@@ -141,9 +141,9 @@ public class JWTUtil {
     /**
      * 토큰에서 role을 추출합니다.
      */
-    public String getRole(String token) {
+    public List<String> getRoles(String token) {
         Claims claims = extractAllClaims(token);
-        return claims.get("role", String.class);
+        return (List<String>) claims.get("roles");
     }
 
     /**

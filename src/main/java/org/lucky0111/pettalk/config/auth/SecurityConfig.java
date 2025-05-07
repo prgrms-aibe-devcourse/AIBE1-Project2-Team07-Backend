@@ -5,8 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.lucky0111.pettalk.handler.OAuth2LoginFailureHandler;
 import org.lucky0111.pettalk.handler.OAuth2LoginSuccessHandler;
 import org.lucky0111.pettalk.service.auth.CustomOAuth2UserService;
-import org.lucky0111.pettalk.service.auth.TokenService;
-import org.lucky0111.pettalk.util.auth.JWTFilter;
+import org.lucky0111.pettalk.util.auth.JwtFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,7 +14,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
@@ -23,13 +21,14 @@ import java.util.Collections;
 import java.util.List;
 
 @Configuration
-@EnableWebSecurity
+@EnableWebSecurity(debug = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
-    private final TokenService tokenService;
+    private final JwtFilter jwtFilter;
+//    private final PreOAuth2AuthenticationFilter preOAuth2AuthenticationFilter;
 
     @Value("${DEV_SERVER_URL}")
     String devServerUrl;
@@ -42,18 +41,18 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
-                .addFilterBefore(new JWTFilter(tokenService), UsernamePasswordAuthenticationFilter.class)
                 .oauth2Login((oauth2) -> oauth2
                         .userInfoEndpoint((userInfoEndpointConfig) -> userInfoEndpointConfig
                                 .userService(customOAuth2UserService))
                         .successHandler(oAuth2LoginSuccessHandler)
                         .failureHandler(oAuth2LoginFailureHandler)
                 )
+//                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+//                .addFilterBefore(preOAuth2AuthenticationFilter, OAuth2AuthorizationRequestRedirectFilter.class)
 
                 //경로별 인가 작업
                 .authorizeHttpRequests((auth) -> auth
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api/v1/auth/register",
-                                "/api/v1/auth/check-nickname", "/api/v1/auth/refresh", "/").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api/v1/auth/**", "/").permitAll()
 //                        .requestMatchers("/api/v1/auth/**").authenticated()
                         .anyRequest().permitAll())
 
