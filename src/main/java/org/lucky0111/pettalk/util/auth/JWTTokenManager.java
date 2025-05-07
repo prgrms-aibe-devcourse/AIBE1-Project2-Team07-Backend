@@ -87,7 +87,7 @@ public class JWTTokenManager {
                     user.getProvider(),
                     user.getSocialId(),
                     user.getUserId(),
-                    user.getRole(),
+                    user.getRole().name(),
                     user.getEmail(),
                     accessTokenExpirationMs);
         } else {
@@ -95,7 +95,7 @@ public class JWTTokenManager {
                     user.getProvider(),
                     user.getSocialId(),
                     user.getUserId(),
-                    user.getRole(),
+                    user.getRole().name(),
                     accessTokenExpirationMs);
         }
 
@@ -121,7 +121,7 @@ public class JWTTokenManager {
                                 user.getProvider(),
                                 user.getSocialId(),
                                 user.getUserId(),
-                                user.getRole(),
+                                user.getRole().name(),
                                 user.getEmail(),
                                 accessTokenExpirationMs);
                     } else {
@@ -129,7 +129,7 @@ public class JWTTokenManager {
                                 user.getProvider(),
                                 user.getSocialId(),
                                 user.getUserId(),
-                                user.getRole(),
+                                user.getRole().name(),
                                 accessTokenExpirationMs);
                     }
 
