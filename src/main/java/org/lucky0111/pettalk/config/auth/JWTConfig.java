@@ -12,13 +12,13 @@ import java.nio.charset.StandardCharsets;
 @Configuration
 public class JWTConfig {
     @Getter
-    @Value("${spring.jwt.access-expires-in}")
+    @Value("${spring.jwt.access-token-expiration-ms}")
     private Long accessTokenExpiresIn;
 
     @Getter
-    @Value("${spring.jwt.refresh-expires-in}")
-    private Long refreshTokenExpiresIn;
-    
+    @Value("${spring.jwt.refresh-token-expiration-days}")
+    private Long refreshTokenExpiresInDays;
+
     @Value("${spring.jwt.secret}")
     private String secret;
 

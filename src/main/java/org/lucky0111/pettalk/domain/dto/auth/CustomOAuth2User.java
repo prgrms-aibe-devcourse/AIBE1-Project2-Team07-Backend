@@ -8,9 +8,10 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RequiredArgsConstructor
-public class OAuth2UserPrincipal implements OAuth2User, UserDetails {
+public class CustomOAuth2User implements OAuth2User, UserDetails {
     private final String username;
     private final OAuth2UserInfo oAuth2UserInfo;
     private final List<GrantedAuthority> authorities;
@@ -38,5 +39,9 @@ public class OAuth2UserPrincipal implements OAuth2User, UserDetails {
     @Override
     public String getUsername() {
         return username;
+    }
+
+    public UUID getUserId() {
+        return UUID.fromString(username);
     }
 }

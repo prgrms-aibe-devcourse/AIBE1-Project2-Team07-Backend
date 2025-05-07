@@ -1,6 +1,7 @@
 package org.lucky0111.pettalk.handler;
 
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,7 @@ import java.util.UUID;
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     @Value("${spring.security.oauth2.redirect-url}")
     private String oAuth2RedirectUrl;
-
+    
     private final JWTUtil jwtUtil;
 
     @Override
@@ -42,12 +43,29 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 .toList();
 
         String accessToken = jwtUtil.createJwt(TokenType.ACCESS, UUID.fromString(username), roles);
+        String refreshToken = jwtUtil.createJwt(TokenType.REFRESH, UUID.fromString(username), roles);
 
         String redirectUrl = UriComponentsBuilder
                 .fromUriString(oAuth2RedirectUrl)
-                .queryParam("token", accessToken)
                 .build().toUriString();
 
+        Cookie accessCookie = createCookie(TokenType.ACCESS.getName(), accessToken);
+        Cookie refreshCookie = createCookie(TokenType.REFRESH.getName(), refreshToken);
+        res.addCookie(accessCookie);
+        res.addCookie(refreshCookie);
         res.sendRedirect(redirectUrl);
+    }
+
+    private Cookie createCookie(String name, String value) {
+        Cookie cookie = new Cookie(name, value);
+        cookie.setHttpOnly(true);
+//        cookie.setSecure(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(getCookieMaxAge(value));
+        return cookie;
+    }
+
+    private int getCookieMaxAge(String token) {
+        return (int) jwtUtil.getExpiresIn(token);
     }
 }

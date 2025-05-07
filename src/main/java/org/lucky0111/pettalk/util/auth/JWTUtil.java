@@ -4,6 +4,7 @@ import io.jsonwebtoken.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.config.auth.JWTConfig;
+import org.lucky0111.pettalk.domain.common.TokenStatus;
 import org.lucky0111.pettalk.domain.common.TokenType;
 import org.springframework.stereotype.Component;
 
@@ -24,14 +25,15 @@ public class JWTUtil {
     public String createJwt(TokenType tokenType, UUID userId, List<String> roles) {
         try {
             Instant now = Instant.now();
-            Date expirationDate = getExpirationDate(tokenType);
+            Date issuedAt = Date.from(now);
+            Date expiration = getExpiration(tokenType);
 
             String token = Jwts.builder()
                     .claim("userId", userId.toString())
                     .claim("roles", roles)
                     .claim("type", tokenType.toString().toLowerCase())
-                    .issuedAt(Date.from(now))
-                    .expiration(expirationDate)
+                    .issuedAt(issuedAt)
+                    .expiration(expiration)
                     .signWith(jwtConfig.getSecretKey())
                     .compact();
 
@@ -43,10 +45,11 @@ public class JWTUtil {
         }
     }
 
-    private Date getExpirationDate(TokenType tokenType) {
+    private Date getExpiration(TokenType tokenType) {
         return switch (tokenType) {
             case ACCESS -> Date.from(Instant.now().plusMillis(jwtConfig.getAccessTokenExpiresIn()));
-            case REFRESH -> Date.from(Instant.now().plusMillis(jwtConfig.getRefreshTokenExpiresIn()));
+            case REFRESH ->
+                    Date.from(Instant.now().plusMillis(jwtConfig.getRefreshTokenExpiresInDays() * 24 * 60 * 60 * 1000L));
         };
     }
 
@@ -64,21 +67,24 @@ public class JWTUtil {
     /**
      * 토큰 유효성 검사
      */
-    public boolean validateToken(String token) {
+    public TokenStatus validateToken(String token) {
         try {
             Jwts.parser().verifyWith(jwtConfig.getSecretKey()).build().parseSignedClaims(token);
-            return true;
+            return TokenStatus.AUTHENTICATED;
         } catch (SecurityException | MalformedJwtException e) {
             log.info("Token Invalid: {}", e.getMessage());
         } catch (ExpiredJwtException e) {
             log.info("Token Expired: {}", e.getMessage());
+            return TokenStatus.EXPIRED;
         } catch (UnsupportedJwtException e) {
             log.info("Token Unsupported: {}", e.getMessage());
         } catch (IllegalArgumentException e) {
             log.info("Token Illegal Argument: {}", e.getMessage());
+        } catch (NullPointerException e) {
+            log.info("Token is Null: {}", e.getMessage());
         }
 
-        return false;
+        return TokenStatus.INVALIDATED;
     }
 
     /**
@@ -93,6 +99,22 @@ public class JWTUtil {
         } catch (Exception e) {
             log.error("토큰 만료 확인 중 오류 발생: {}", e.getMessage());
             return true;
+        }
+    }
+
+    /**
+     * 토큰 타입 반환
+     */
+    public TokenType getTokenType(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+            if (claims == null) return null;
+
+            String type = claims.get("type", String.class);
+            return TokenType.valueOf(type.toUpperCase());
+        } catch (Exception e) {
+            log.error("토큰 타입 가져오기 실패: {}", e.getMessage());
+            return null;
         }
     }
 

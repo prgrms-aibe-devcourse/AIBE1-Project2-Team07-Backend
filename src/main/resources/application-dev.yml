@@ -59,6 +59,5 @@ spring:
     access-token-expiration-ms: ${JWT_ACCESS_TOKEN_EXPIRATION_MS} # 1시간
     refresh-token-expiration-days: ${JWT_REFRESH_TOKEN_EXPIRATION_DAYS} # 30일
 
-
 open-api:
   dev-server-url: ${DEV_SERVER_URL}

@@ -14,7 +14,7 @@ public class KakaoOAuth2UserInfo implements OAuth2UserInfo {
         Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
         Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
 
-        this.id = registrationId + "_" + attributes.get("id").toString();
+        this.id = attributes.get("id").toString();
         this.accessToken = accessToken;
         this.attributes = attributes;
         this.nickName = profile.get("nickname").toString();
@@ -42,7 +42,8 @@ public class KakaoOAuth2UserInfo implements OAuth2UserInfo {
 
     @Override
     public String getEmail() {
-        return null;
+        Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
+        return kakaoAccount.get("email").toString();
     }
 
     @Override
