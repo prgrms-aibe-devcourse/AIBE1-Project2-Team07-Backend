@@ -17,7 +17,11 @@ import java.util.List;
 @Entity
 @Table(name = "posts", indexes = {
         @Index(name = "idx_post_title", columnList = "title"),
-        @Index(name = "idx_post_content", columnList = "content")
+        @Index(name = "idx_post_content", columnList = "content"),
+        @Index(name = "idx_post_category", columnList = "postCategory"),
+        @Index(name = "idx_pet_category", columnList = "petCategory"),
+        @Index(name = "idx_like_count", columnList = "likeCount"),
+        @Index(name = "idx_comment_count", columnList = "commentCount")
 })
 @NoArgsConstructor
 public class Post extends BaseTimeEntity {
@@ -40,6 +44,32 @@ public class Post extends BaseTimeEntity {
     private String title;
     private String content;
     private String videoUrl;
+
+    @Column(nullable = false)
+    private Integer commentCount = 0;
+
+    public void incrementCommentCount() {
+        this.commentCount++;
+    }
+
+    public void decrementCommentCount() {
+        if (this.commentCount > 0) {
+            this.commentCount--;
+        }
+    }
+
+    @Column(nullable = false)
+    private Integer likeCount = 0;
+
+    public void incrementLikeCount() {
+        this.likeCount++;
+    }
+
+    public void decrementCLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
+    }
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PostImage> images = new ArrayList<>();

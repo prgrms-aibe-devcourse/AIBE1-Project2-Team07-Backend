@@ -25,6 +25,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -78,31 +79,38 @@ public class PostServiceImpl implements PostService {
     public List<PostResponseDTO> getAllPosts(int page, PostCategory postCategory, PetCategory petCategory, SortType sortType) {
         UUID currentUserUUID = getCurrentUserUUID();
 
-        if (sortType != SortType.LIKES) {
-            Page<Post> postsPage = fetchPostsWithFilters(page, postCategory, petCategory, sortType);
-            List<Post> posts = postsPage.getContent();
-            return processPostsToResponses(posts, currentUserUUID);
-        }
+        Pageable pageable = PageRequest.of(page, PAGE_SIZE);
 
-        Page<Post> postsPage = fetchPostsWithFilters(page, postCategory, petCategory, sortType);
+        Specification<Post> spec = PostSpecification.withFiltersAndSort(null, postCategory, petCategory, sortType);
+
+        Page<Post> postsPage = postRepository.findAll(spec, pageable);
         List<Post> posts = postsPage.getContent();
-        List<Long> postIds = extractPostIds(posts);
 
-        Map<Long, Integer> likeCounts = fetchLikeCountsByPostIds(postIds);
+        return processPostsToResponses(posts, currentUserUUID);
+    }
 
-        // 좋아요 수로 정렬
-        posts.sort((p1, p2) -> {
-            Integer count1 = likeCounts.getOrDefault(p1.getPostId(), 0);
-            Integer count2 = likeCounts.getOrDefault(p2.getPostId(), 0);
-            return count2.compareTo(count1); // 내림차순
-        });
+    @Override
+    @Transactional(readOnly = true)
+    public List<PostResponseDTO> getMyPosts() {
+        UUID currentUserUUID = getCurrentUserUUID();
+
+        List<Post> posts = postRepository.findByUser_UserId(currentUserUUID);
+
+        return processPostsToResponses(posts, currentUserUUID);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PostResponseDTO> getLikedPosts() {
+        UUID currentUserUUID = getCurrentUserUUID();
+
+        List<Post> posts = postLikeRepository.findPostsByUserId(currentUserUUID);
 
         return processPostsToResponses(posts, currentUserUUID);
     }
 
 
-
-
+    @Override
     @Transactional(readOnly = true)
     public List<PostResponseDTO> searchPosts(
             String keyword, int page, PostCategory postCategory,
@@ -110,14 +118,13 @@ public class PostServiceImpl implements PostService {
 
         UUID currentUserUUID = getCurrentUserUUID();
 
-        Pageable pageable = PageRequest.of(page, PAGE_SIZE, sortType.getSort());
+        Pageable pageable = PageRequest.of(page, PAGE_SIZE);
 
-        Page<Post> postsPage = postRepository.findAll(
-                PostSpecification.withFilters(keyword, postCategory, petCategory),
-                pageable
-        );
+        Specification<Post> spec = PostSpecification.withFiltersAndSort(keyword, postCategory, petCategory, sortType);
 
+        Page<Post> postsPage = postRepository.findAll(spec, pageable);
         List<Post> posts = postsPage.getContent();
+
         return processPostsToResponses(posts, currentUserUUID);
     }
 
@@ -127,12 +134,10 @@ public class PostServiceImpl implements PostService {
         UUID currentUserUUID = getCurrentUserUUID();
         Post post = findPostById(postId);
 
-        int likeCount = countPostLikes(post);
-        int commentCount = countPostComments(post);
         boolean hasLiked = checkUserLikedPost(post, currentUserUUID);
         List<String> tags = fetchPostTags(postId);
 
-        return buildPostResponse(post, currentUserUUID, likeCount, commentCount, hasLiked, tags);
+        return buildPostResponse(post, currentUserUUID, post.getLikeCount(), post.getCommentCount(), hasLiked, tags);
     }
 
     @Override
@@ -150,12 +155,10 @@ public class PostServiceImpl implements PostService {
 
         Post updatedPost = postRepository.save(post);
 
-        int likeCount = countPostLikes(updatedPost);
-        int commentCount = countPostComments(updatedPost);
         boolean hasLiked = checkUserLikedPost(updatedPost, currentUserUUID);
         List<String> tags = fetchPostTags(postId);
 
-        return buildPostResponse(updatedPost, currentUserUUID, likeCount, commentCount, hasLiked, tags);
+        return buildPostResponse(updatedPost, currentUserUUID, post.getLikeCount(), post.getCommentCount(), hasLiked, tags);
     }
 
     @Override
@@ -178,16 +181,20 @@ public class PostServiceImpl implements PostService {
         Optional<PostLike> existingLike = findExistingLike(post, currentUser);
 
         if (existingLike.isPresent()) {
+            post.decrementCLikeCount();
+            postRepository.save(post);
+
             return handleLikeRemoval(existingLike.get(), post);
         } else {
+            post.incrementLikeCount();
+            postRepository.save(post);
+
             return handleLikeCreation(post, currentUser);
         }
     }
 
     private List<PostResponseDTO> processPostsToResponses(List<Post> posts, UUID currentUserUUID) {
         List<Long> postIds = extractPostIds(posts);
-        Map<Long, Integer> likeCounts = fetchLikeCountsByPostIds(postIds);
-        Map<Long, Integer> commentCounts = fetchCommentCountsByPostIds(postIds);
         Map<Long, Boolean> userLikedMap = fetchUserLikeStatusByPostIds(postIds, currentUserUUID);
         Map<Long, List<String>> postTagsMap = fetchTagsByPostIds(postIds);
 
@@ -195,8 +202,8 @@ public class PostServiceImpl implements PostService {
                 .map(post -> buildPostResponse(
                         post,
                         currentUserUUID,
-                        likeCounts.getOrDefault(post.getPostId(), 0),
-                        commentCounts.getOrDefault(post.getPostId(), 0),
+                        post.getLikeCount(),
+                        post.getCommentCount(),
                         userLikedMap.getOrDefault(post.getPostId(), false),
                         postTagsMap.getOrDefault(post.getPostId(), new ArrayList<>())
                 ))
@@ -214,7 +221,6 @@ public class PostServiceImpl implements PostService {
         return post;
     }
 
-    // 태그 저장 메소드
     private void savePostTags(Post post, List<Long> tagIds) {
         if (tagIds != null && !tagIds.isEmpty()) {
             List<Tag> tags = tagRepository.findAllById(tagIds);
@@ -228,47 +234,10 @@ public class PostServiceImpl implements PostService {
         }
     }
 
-    private Page<Post> fetchPostsWithFilters(int page, PostCategory postCategory, PetCategory petCategory, SortType sortType) {
-        Pageable pageable;
-
-        if (sortType == SortType.LIKES) {
-            pageable = PageRequest.of(page, PAGE_SIZE);
-            return postRepository.findByFiltersOrderByLikes(postCategory, petCategory, pageable);
-        } else {
-            pageable = PageRequest.of(page, PAGE_SIZE, sortType.getSort());
-            return postRepository.findAll(
-                    PostSpecification.withFilters(postCategory, petCategory),
-                    pageable
-            );
-        }
-    }
-
-    private Pageable createPageable(int page) {
-        return PageRequest.of(page, PAGE_SIZE, Sort.by("createdAt").descending());
-    }
-
     private List<Long> extractPostIds(List<Post> posts) {
         return posts.stream()
                 .map(Post::getPostId)
                 .collect(Collectors.toList());
-    }
-
-    private Map<Long, Integer> fetchLikeCountsByPostIds(List<Long> postIds) {
-        return postLikeRepository.countLikesByPostIds(postIds)
-                .stream()
-                .collect(Collectors.toMap(
-                        PostLikeRepository.PostLikeCountProjection::getPostId,
-                        PostLikeRepository.PostLikeCountProjection::getLikeCount
-                ));
-    }
-
-    private Map<Long, Integer> fetchCommentCountsByPostIds(List<Long> postIds) {
-        return commentRepository.countCommentsByPostIds(postIds)
-                .stream()
-                .collect(Collectors.toMap(
-                        CommentRepository.CommentCountProjection::getPostId,
-                        CommentRepository.CommentCountProjection::getCommentCount
-                ));
     }
 
     private Map<Long, Boolean> fetchUserLikeStatusByPostIds(List<Long> postIds, UUID userId) {
@@ -295,14 +264,6 @@ public class PostServiceImpl implements PostService {
     private Post findPostById(Long postId) {
         return postRepository.findById(postId)
                 .orElseThrow(() -> new CustomException("해당 게시물을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
-    }
-
-    private int countPostLikes(Post post) {
-        return postLikeRepository.countByPost(post);
-    }
-
-    private int countPostComments(Post post) {
-        return commentRepository.countByPost(post);
     }
 
     private boolean checkUserLikedPost(Post post, UUID userId) {
@@ -373,7 +334,6 @@ public class PostServiceImpl implements PostService {
         return new PostLikeResponseDTO(
                 existingLike.getLikeId(),
                 post.getPostId(),
-                null,
                 false
         );
     }
@@ -384,18 +344,12 @@ public class PostServiceImpl implements PostService {
         postLike.setUser(user);
 
         PostLike savedLike = postLikeRepository.save(postLike);
-        String createdAt = formatCurrentDateTime();
 
         return new PostLikeResponseDTO(
                 savedLike.getLikeId(),
                 post.getPostId(),
-                createdAt,
                 true
         );
-    }
-
-    private String formatCurrentDateTime() {
-        return java.time.LocalDateTime.now().format(DATE_FORMATTER);
     }
 
     private String formatDateTime(java.time.LocalDateTime dateTime) {
@@ -403,12 +357,10 @@ public class PostServiceImpl implements PostService {
     }
 
     private PostResponseDTO convertToResponseDTO(Post post, UUID currentUserUUID) {
-        int likeCount = countPostLikes(post);
-        int commentCount = countPostComments(post);
         boolean hasLiked = checkUserLikedPost(post, currentUserUUID);
         List<String> tags = fetchPostTags(post.getPostId());
 
-        return buildPostResponse(post, currentUserUUID, likeCount, commentCount, hasLiked, tags);
+        return buildPostResponse(post, currentUserUUID, post.getLikeCount(), post.getCommentCount(), hasLiked, tags);
     }
 
     private PostResponseDTO buildPostResponse(Post post, UUID currentUserUUID,

@@ -5,13 +5,9 @@ import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.lucky0111.pettalk.domain.dto.community.CommentRequestDTO;
-import org.lucky0111.pettalk.domain.dto.community.CommentResponseDTO;
-import org.lucky0111.pettalk.domain.dto.community.CommentUpdateDTO;
-import org.lucky0111.pettalk.domain.dto.community.CommentsResponseDTO;
+import org.lucky0111.pettalk.domain.dto.community.*;
 import org.lucky0111.pettalk.service.community.CommentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -66,13 +62,7 @@ public class CommentController {
             @RequestBody CommentRequestDTO requestDTO) {
         log.info("댓글 작성 요청: postId={}, {}", postId, requestDTO);
 
-        CommentRequestDTO updatedRequestDTO = new CommentRequestDTO(
-                postId,
-                requestDTO.parentCommentId(),
-                requestDTO.content()
-        );
-
-        CommentResponseDTO createdComment = commentService.createComment(updatedRequestDTO);
+        CommentResponseDTO createdComment = commentService.createComment(postId, requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdComment);
     }
 
@@ -97,5 +87,15 @@ public class CommentController {
 
         commentService.deleteComment(commentId);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "작성한 댓글 목록 조회", description = "작성한 댓글 목록을 조회합니다.")
+    @GetMapping("/api/v1/comments/users/me")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<List<MyCommentResponseDTO>> getaMyComments() {
+        log.info("댓글 작성 목록 조회 요청");
+
+        List<MyCommentResponseDTO> myComments = commentService.getMyComments();
+        return ResponseEntity.ok(myComments);
     }
 }

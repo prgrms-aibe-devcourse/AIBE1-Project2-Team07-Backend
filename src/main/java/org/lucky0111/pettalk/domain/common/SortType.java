@@ -20,6 +20,12 @@ public enum SortType {
         public Sort getSort() {
             return Sort.by(Sort.Direction.DESC, "likeCount");
         }
+    },
+    COMMENTS {
+        @Override
+        public Sort getSort() {
+            return Sort.by(Sort.Direction.DESC, "commentCount");
+        }
     };
 
     public abstract Sort getSort();

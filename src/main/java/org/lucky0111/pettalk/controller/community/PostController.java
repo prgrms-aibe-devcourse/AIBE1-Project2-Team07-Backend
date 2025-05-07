@@ -67,6 +67,26 @@ public class PostController {
         return ResponseEntity.ok(posts);
     }
 
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "게시물 작성 목록 조회", description = "작선한 게시물 목록을 조회합니다.")
+    @GetMapping("/users/me")
+    public ResponseEntity<List<PostResponseDTO>> getMyPosts() {
+        log.info("게시물 작성 목록 조회 요청");
+
+        List<PostResponseDTO> posts = postService.getMyPosts();
+        return ResponseEntity.ok(posts);
+    }
+
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "좋아요 게시물 목록 조회", description = "좋아요 게시물 목록을 조회합니다.")
+    @GetMapping("/users/liked")
+    public ResponseEntity<List<PostResponseDTO>> getLikedPosts() {
+        log.info("좋아요 작성 목록 조회 요청");
+
+        List<PostResponseDTO> posts = postService.getLikedPosts();
+        return ResponseEntity.ok(posts);
+    }
+
     @Operation(summary = "게시물 상세 조회", description = "특정 게시물을 상세 조회합니다.")
     @GetMapping("/{postId}")
     @SecurityRequirement(name = "bearerAuth")
@@ -122,6 +142,4 @@ public class PostController {
         PostLikeResponseDTO response = postService.toggleLike(postId);
         return ResponseEntity.ok(response);
     }
-
-
 }
