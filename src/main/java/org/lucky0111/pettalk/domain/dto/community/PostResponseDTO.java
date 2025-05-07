@@ -15,7 +15,7 @@ public record PostResponseDTO(
         PetCategory petCategory,
         String title,
         String content,
-        String imageUrl,
+        List<String> imageUrls,
         String videoUrl,
         Integer likeCount,
         Integer commentCount,

@@ -116,6 +116,7 @@ public class JWTFilter extends OncePerRequestFilter {
     // 요청 경로가 제외 목록의 경로 패턴과 일치하는지 확인
     private boolean shouldSkipFilter(String requestPath) {
         return false;
+
 //        return excludedPaths.stream()
 //                .anyMatch(path -> {
 //                    if (path.endsWith("/")) {
