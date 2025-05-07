@@ -50,7 +50,7 @@ public class TrainerServiceImpl implements TrainerService {
     public TrainerDTO getTrainerDetails(UUID trainerId) {
         // 1. Trainer 엔티티 조회 (ID는 UUID)
         Trainer trainer = trainerRepository.findById(trainerId)
-                .orElseThrow(() -> new CustomException("Trainer not found with id: %s".formatted(trainerId), HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new CustomException("훈련사 정보를 찾을 수 없습니다 ID: %s".formatted(trainerId), HttpStatus.NOT_FOUND));
 
         // 2. 연관된 PetUser 엔티티 조회 (Trainer 엔티티에 User user 필드가 있고 @OneToOne 관계로 매핑되었다고 가정)
         PetUser user = trainer.getUser();
@@ -70,12 +70,19 @@ public class TrainerServiceImpl implements TrainerService {
                 user != null ? user.getNickname() : null,
                 user != null ? user.getProfileImageUrl() : null,
                 user != null ? user.getEmail() : null, // email 필드 추가 (PetUser에 있다고 가정)
+
                 trainer.getIntroduction(),
+                trainer.getRepresentativeCareer(),
+                trainer.getSpecializationText(),
+                trainer.getVisitingAreas(),
+                trainer.getServiceFees(),
                 trainer.getExperienceYears(),
-                specializationNames, // 태그 이름 목록
+
+                specializationNames, // 태그 이름 목록 (리스트 형태)
                 certificationDtoList, // 자격증 DTO 목록
                 reviewStatsDTO.averageRating(),
                 reviewStatsDTO.reviewCount()
+
         );
     }
     private List<CertificationDTO> getCertificationDTOList(UUID trainerId){
