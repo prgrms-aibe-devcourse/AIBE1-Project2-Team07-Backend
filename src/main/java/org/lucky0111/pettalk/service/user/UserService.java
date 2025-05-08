@@ -2,12 +2,16 @@ package org.lucky0111.pettalk.service.user;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.lucky0111.pettalk.domain.common.ErrorCode;
 import org.lucky0111.pettalk.domain.common.UserRole;
 import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
 import org.lucky0111.pettalk.domain.dto.user.UserRegisterDTO;
+import org.lucky0111.pettalk.domain.dto.user.UserResponseDTO;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
+import org.lucky0111.pettalk.exception.CustomException;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -36,7 +40,7 @@ public class UserService {
     }
 
     @Transactional
-    public PetUser joinUser(UserRegisterDTO userRegisterDTO, Authentication authentication) {
+    public PetUser updateUserProfile(UserRegisterDTO userRegisterDTO, Authentication authentication) {
         CustomOAuth2User customOAuth2User = (CustomOAuth2User) authentication.getPrincipal();
         String username = customOAuth2User.getName();
 
@@ -61,14 +65,23 @@ public class UserService {
         return userRepository.save(petUser);
     }
 
-    public PetUser getUserById(UUID userId) {
-        return userRepository.findById(userId)
+    public UserResponseDTO getUserById() {
+        UUID userId = getCurrentUserUUID();
+
+        PetUser petUser = userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with id:" + userId));
+        
+        return UserResponseDTO.from(petUser);
     }
 
-    public boolean isGuest(UUID userId) {
-        return userRepository.findById(userId)
-                .map(petUser -> petUser.getRole() == UserRole.GUEST)
-                .orElse(false);
+    private UUID getCurrentUserUUID() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null && authentication.isAuthenticated() &&
+                authentication.getPrincipal() instanceof CustomOAuth2User userDetails) {
+            return userDetails.getUserId();
+        }
+
+        throw new CustomException(ErrorCode.UNAUTHORIZED);
     }
 }
