@@ -1,6 +1,8 @@
 package org.lucky0111.pettalk.service.match;
 
 import org.lucky0111.pettalk.domain.common.ApplyStatus;
+import org.lucky0111.pettalk.domain.dto.match.ApplyAnswerRequestDTO;
+import org.lucky0111.pettalk.domain.dto.match.ApplyAnswerResponseDTO;
 import org.lucky0111.pettalk.domain.dto.match.UserApplyRequestDTO;
 import org.lucky0111.pettalk.domain.dto.match.UserApplyResponseDTO;
 import org.lucky0111.pettalk.domain.entity.match.UserApply;
@@ -31,4 +33,8 @@ public interface UserApplyService {
     UserApplyResponseDTO updateApplyStatus(Long applyId, ApplyStatus applyStatus);
 
     UserApplyResponseDTO deleteApply(Long applyId);
+
+    UserApplyResponseDTO updateApplyStatusWithResponse(ApplyAnswerRequestDTO applyAnswerRequestDTO);
+
+    ApplyAnswerResponseDTO getApplyAnswer(Long applyId);
 }
