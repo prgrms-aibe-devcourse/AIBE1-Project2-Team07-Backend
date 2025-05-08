@@ -14,14 +14,16 @@ import org.lucky0111.pettalk.repository.review.ReviewRepository;
 import org.lucky0111.pettalk.repository.trainer.*;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.lucky0111.pettalk.service.file.FileUploaderService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,6 +44,41 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     @Transactional(readOnly = true)
+    public TrainerPageDTO getAllTrainers(int page, int size){
+        Pageable pageable = PageRequest.of(page, size);
+
+        List<Trainer> trainers = trainerRepository.findAllWithPhotosAndServiceFees(pageable);
+
+        long totalTrainers = trainerRepository.countTrainers();
+        int totalPages = (int) Math.ceil((double) totalTrainers / size);
+
+        List<UUID> trainerIds = trainers.stream()
+                .map(Trainer::getTrainerId)
+                .collect(Collectors.toList());
+
+        Map<UUID, List<CertificationDTO>> certificationMap = getCertificationMapForTrainers(trainerIds);
+
+        Map<UUID, List<String>> specializationMap = getSpecializationMapForTrainers(trainerIds);
+
+        Map<UUID, ReviewStatsDTO> reviewStatsMap = getReviewStatsMapForTrainers(trainerIds);
+
+        List<TrainerDTO> trainerDTOs = trainers.stream()
+                .map(trainer -> convertToTrainerDTO(
+                        trainer,
+                        getPhotosDTO(trainer.getPhotos()),
+                        getServiceFeesDTO(trainer.getServiceFees()),
+                        specializationMap.getOrDefault(trainer.getTrainerId(), Collections.emptyList()),
+                        certificationMap.getOrDefault(trainer.getTrainerId(), Collections.emptyList()),
+                        reviewStatsMap.getOrDefault(trainer.getTrainerId(), new ReviewStatsDTO(0.0, 0L))
+                ))
+                .collect(Collectors.toList());
+
+        return new TrainerPageDTO(trainerDTOs, page, size, totalPages);
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
     public TrainerDTO getTrainerDetails(String trainerNickname) {
         // 1. Trainer 엔티티 조회 (ID는 UUID)
         Trainer trainer = trainerRepository.findByUser_Nickname(trainerNickname)
@@ -49,8 +86,8 @@ public class TrainerServiceImpl implements TrainerService {
 
         PetUser user = trainer.getUser();
 
-        List<TrainerPhoto> photos = trainer.getPhotos();
-        List<TrainerServiceFee> serviceFees = trainer.getServiceFees();
+        Set<TrainerPhoto> photos = trainer.getPhotos();
+        Set<TrainerServiceFee> serviceFees = trainer.getServiceFees();
 
         List<String> specializationNames = getSpecializationNames(trainer.getTrainerId());
         List<CertificationDTO> certificationDtoList = getCertificationDTOList(trainer.getTrainerId());
@@ -64,6 +101,7 @@ public class TrainerServiceImpl implements TrainerService {
 
         return new TrainerDTO(
                 trainer.getTrainerId(), // UUID 타입
+                user != null ? user.getName() : null,
                 user != null ? user.getNickname() : null,
                 user != null ? user.getProfileImageUrl() : null,
                 user != null ? user.getEmail() : null, // email 필드 추가 (PetUser에 있다고 가정)
@@ -73,7 +111,7 @@ public class TrainerServiceImpl implements TrainerService {
                 trainer.getRepresentativeCareer(),
                 trainer.getSpecializationText(),
                 trainer.getVisitingAreas(),
-                trainer.getExperienceYears(),
+                trainer.getExperienceYears() != null ? trainer.getExperienceYears() : 0,
 
                 photoDTOs,
                 serviceFeeDTOs,
@@ -83,6 +121,77 @@ public class TrainerServiceImpl implements TrainerService {
                 reviewStatsDTO.averageRating(),
                 reviewStatsDTO.reviewCount()
 
+        );
+    }
+
+    private Map<UUID, List<CertificationDTO>> getCertificationMapForTrainers(List<UUID> trainerIds) {
+        // 트레이너 ID 목록으로 자격증 조회
+        return certificationRepository.findAllByTrainer_TrainerIdIn(trainerIds).stream()
+                .collect(Collectors.groupingBy(
+                        certification -> certification.getTrainer().getTrainerId(),
+                        Collectors.mapping(CertificationDTO::fromEntity, Collectors.toList())
+                ));
+    }
+
+    private Map<UUID, List<String>> getSpecializationMapForTrainers(List<UUID> trainerIds) {
+        return trainerTagRepository.findAllByTrainer_TrainerIdIn(trainerIds).stream()
+                .collect(Collectors.groupingBy(
+                        relation -> relation.getTrainer().getTrainerId(),
+                        Collectors.mapping(
+                                relation -> relation.getTag().getTagName(),
+                                Collectors.toList()
+                        )
+                ));
+    }
+
+    // 여러 트레이너의 리뷰 통계를 한 번에 조회
+    private Map<UUID, ReviewStatsDTO> getReviewStatsMapForTrainers(List<UUID> trainerIds) {
+        // 트레이너 ID 목록으로 평균 평점 조회
+        Map<UUID, Double> avgRatings = reviewRepository.findAverageRatingsByTrainerIds(trainerIds);
+
+        // 트레이너 ID 목록으로 리뷰 개수 조회
+        Map<UUID, Long> reviewCounts = reviewRepository.countReviewsByTrainerIds(trainerIds);
+
+        // 결과 맵 생성
+        Map<UUID, ReviewStatsDTO> result = new HashMap<>();
+        for (UUID trainerId : trainerIds) {
+            Double avgRating = avgRatings.getOrDefault(trainerId, 0.0);
+            Long reviewCount = reviewCounts.getOrDefault(trainerId, 0L);
+            result.put(trainerId, new ReviewStatsDTO(avgRating, reviewCount));
+        }
+
+        return result;
+    }
+
+    // TrainerDTO 변환 메서드 분리
+    private TrainerDTO convertToTrainerDTO(
+            Trainer trainer,
+            List<TrainerPhotoDTO> photoDTOs,
+            List<TrainerServiceFeeDTO> serviceFeeDTOs,
+            List<String> specializationNames,
+            List<CertificationDTO> certificationDtoList,
+            ReviewStatsDTO reviewStatsDTO) {
+
+        PetUser user = trainer.getUser();
+
+        return new TrainerDTO(
+                trainer.getTrainerId(),
+                user != null ? user.getName() : null,
+                user != null ? user.getNickname() : null,
+                user != null ? user.getProfileImageUrl() : null,
+                user != null ? user.getEmail() : null,
+                trainer.getTitle(),
+                trainer.getIntroduction(),
+                trainer.getRepresentativeCareer(),
+                trainer.getSpecializationText(),
+                trainer.getVisitingAreas(),
+                trainer.getExperienceYears() != null ? trainer.getExperienceYears() : 0,
+                photoDTOs,
+                serviceFeeDTOs,
+                specializationNames,
+                certificationDtoList,
+                reviewStatsDTO.averageRating(),
+                reviewStatsDTO.reviewCount()
         );
     }
     private List<CertificationDTO> getCertificationDTOList(UUID trainerId){
@@ -112,10 +221,11 @@ public class TrainerServiceImpl implements TrainerService {
         );
     }
 
-    private List<TrainerPhotoDTO> getPhotosDTO(List<TrainerPhoto> photos){
-        if(photos == null || photos.isEmpty()){
-            return null;
+    private List<TrainerPhotoDTO> getPhotosDTO(Set<TrainerPhoto> photos) {
+        if (photos == null || photos.isEmpty()) {
+            return Collections.emptyList();
         }
+
         return photos.stream()
                 .map(photo -> new TrainerPhotoDTO(
                         photo.getFileUrl(),
@@ -124,10 +234,11 @@ public class TrainerServiceImpl implements TrainerService {
                 .collect(Collectors.toList());
     }
 
-    private List<TrainerServiceFeeDTO> getServiceFeesDTO(List<TrainerServiceFee> serviceFees){
-        if(serviceFees == null || serviceFees.isEmpty()){
-            return null;
+    private List<TrainerServiceFeeDTO> getServiceFeesDTO(Set<TrainerServiceFee> serviceFees) {
+        if (serviceFees == null || serviceFees.isEmpty()) {
+            return Collections.emptyList();
         }
+
         return serviceFees.stream()
                 .map(fee -> new TrainerServiceFeeDTO(
                         fee.getServiceType().name(),
@@ -142,17 +253,56 @@ public class TrainerServiceImpl implements TrainerService {
     public void applyTrainer(UUID userId, TrainerApplicationRequestDTO applicationReq, List<MultipartFile> certificationFiles) {
 
         PetUser petUser = findAndValidateUser(userId);
-
         Trainer trainer = findOrCreateTrainer(userId, petUser);
-
-        trainer.setIntroduction(applicationReq.introduction());
-        trainer.setExperienceYears(applicationReq.experienceYears());
-        // 자기소개 및 경력은 개선필요
 
         processCertifications(trainer, applicationReq, certificationFiles);
 
         trainerRepository.save(trainer);
 
+    }
+
+    @Override
+    @Transactional
+    public void addCertification(UUID trainerId, CertificationRequestDTO certificationDTO, MultipartFile certificationFile) {
+        Trainer trainer = trainerRepository.findById(trainerId)
+                .orElseThrow(() -> new CustomException("트레이너를 찾을 수 없습니다 ID: %s".formatted(trainerId), HttpStatus.NOT_FOUND));
+
+        if (certificationFile == null || certificationFile.isEmpty()) {
+            throw new CustomException("자격증 파일이 첨부되지 않았거나 비어있습니다.", HttpStatus.BAD_REQUEST);
+        }
+        String fileUrl = null;
+//         String s3ObjectKey = null;
+        try {
+            // **** 3. 자격증 파일 S3 업로드 ****
+            String folderName = "certifications/";
+            fileUrl = fileUploaderService.uploadFile(certificationFile, folderName);
+//             s3ObjectKey = extractS3ObjectKeyFromUrl(fileUrl);
+
+            Certification certification = new Certification();
+            certification.setCertName(certificationDTO.certName());
+            certification.setIssuingBody(certificationDTO.issuingBody());
+            certification.setIssueDate(certificationDTO.issueDate());
+
+            certification.setFileUrl(fileUrl);
+            // certification.setS3ObjectKey(s3ObjectKey); // 필요하다면 Object Key 저장 (삭제 시 유용)
+            certification.setApproved(false);
+            trainer.addCertification(certification);
+            certificationRepository.save(certification);
+
+        } catch (Exception e) { // 파일 업로드, 엔티티 생성, DB 저장 중 발생 가능한 모든 예외를 잡습니다.
+            // **** 7. 오류 발생 시 정리 (고아 파일 삭제) ****
+            e.printStackTrace(); // 오류 로깅 (필수)
+
+            // S3 업로드가 성공했다면 (fileUrl이 null이 아니라면) 해당 파일 삭제 시도
+            if (fileUrl != null) {
+                try {
+                    fileUploaderService.deleteFile(fileUrl);
+                } catch (RuntimeException deleteException) {
+                    deleteException.printStackTrace();
+                }
+            }
+            throw new CustomException("자격증 정보 추가 및 파일 업로드 중 오류 발생", e, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
     private PetUser findAndValidateUser(UUID userId) {
         // PetUserRepository를 사용하여 신청한 userId로 PetUser 엔티티를 조회합니다. (사용자가 없을 경우 예외 처리)
