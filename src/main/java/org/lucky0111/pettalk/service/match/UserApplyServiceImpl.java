@@ -267,6 +267,8 @@ public class UserApplyServiceImpl implements UserApplyService {
         return new ApplyAnswerResponseDTO(
                 applyAnswer.getResponseId(),
                 applyAnswer.getUserApply().getApplyId(),
+                applyAnswer.getUserApply().getPetUser().getNickname(),
+                applyAnswer.getUserApply().getTrainer().getUser().getName(),
                 applyAnswer.getUserApply().getTrainer().getUser().getNickname(),
                 applyAnswer.getUserApply().getTrainer().getUser().getProfileImageUrl(),
                 applyAnswer.getContent(),
@@ -300,6 +302,7 @@ public class UserApplyServiceImpl implements UserApplyService {
                 userApply.getApplyId(),
                 userApply.getPetUser().getNickname(),
                 userApply.getPetUser().getProfileImageUrl(),
+                userApply.getTrainer().getUser().getName(),
                 userApply.getTrainer().getUser().getNickname(),
                 userApply.getTrainer().getUser().getProfileImageUrl(),
                 userApply.getServiceType().getDescription(),
