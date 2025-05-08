@@ -175,6 +175,16 @@ public class ReviewServiceImpl implements ReviewService {
         return convertToResponseDTOList(reviews, likeCounts, userLikedMap);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public ReviewResponseDTO getReviewByApplyId(Long applyId){
+        UUID currentUserUUID = getCurrentUserUUID();
+
+        Review review = reviewRepository.findByUserApply_ApplyId(applyId);
+        return convertToResponseDTO(review, currentUserUUID);
+
+    }
+
     private Review buildReviewFromRequest(ReviewRequestDTO requestDTO, UserApply userApply) {
         Review review = new Review();
         review.setUserApply(userApply);
