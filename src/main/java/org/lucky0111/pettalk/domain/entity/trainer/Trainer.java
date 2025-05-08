@@ -9,9 +9,7 @@ import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Getter
 @Setter
@@ -43,10 +41,10 @@ public class Trainer extends BaseTimeEntity {
     private List<Certification> certifications = new ArrayList<>();
 
     @OneToMany(mappedBy = "trainer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<TrainerPhoto> photos = new ArrayList<>();
+    private Set<TrainerPhoto> photos = new HashSet<>();
 
     @OneToMany(mappedBy = "trainer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<TrainerServiceFee> serviceFees = new ArrayList<>();
+    private Set<TrainerServiceFee> serviceFees = new HashSet<>();
 
 
     public void addCertification(Certification certification) {
