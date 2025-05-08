@@ -18,6 +18,7 @@ spring:
 
   security:
     oauth2:
+      redirect-url: ${OAUTH2_REDIRECT_URL}
       client:
         registration:
           naver:
@@ -57,9 +58,6 @@ spring:
     secret: ${JWT_SECRET}
     access-token-expiration-ms: ${JWT_ACCESS_TOKEN_EXPIRATION_MS} # 1시간
     refresh-token-expiration-days: ${JWT_REFRESH_TOKEN_EXPIRATION_DAYS} # 30일
-
-front:
-  url: ${FRONT_URL}
 
 open-api:
   dev-server-url: ${DEV_SERVER_URL}

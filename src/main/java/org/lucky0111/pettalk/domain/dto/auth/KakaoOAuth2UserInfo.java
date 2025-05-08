@@ -1,0 +1,63 @@
+package org.lucky0111.pettalk.domain.dto.auth;
+
+import org.lucky0111.pettalk.domain.common.OAuth2Provider;
+
+import java.util.Map;
+
+public class KakaoOAuth2UserInfo implements OAuth2UserInfo {
+    private final Map<String, Object> attributes;
+    private final String accessToken;
+    private final String id;
+    private final String nickName;
+
+    public KakaoOAuth2UserInfo(String registrationId, String accessToken, Map<String, Object> attributes) {
+        Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
+        Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
+
+        this.id = attributes.get("id").toString();
+        this.accessToken = accessToken;
+        this.attributes = attributes;
+        this.nickName = profile.get("nickname").toString();
+    }
+
+    @Override
+    public OAuth2Provider getProvider() {
+        return OAuth2Provider.KAKAO;
+    }
+
+    @Override
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+    @Override
+    public Map<String, Object> getAttributes() {
+        return attributes;
+    }
+
+    @Override
+    public String getId() {
+        return id;
+    }
+
+    @Override
+    public String getEmail() {
+        Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
+        return kakaoAccount.get("email").toString();
+    }
+
+    @Override
+    public String getName() {
+        return null;
+    }
+
+    @Override
+    public String getNickname() {
+        return nickName;
+    }
+
+    @Override
+    public String getProfileImageUrl() {
+        return null;
+    }
+}

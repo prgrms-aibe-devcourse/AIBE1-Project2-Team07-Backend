@@ -1,4 +1,0 @@
-package org.lucky0111.pettalk.domain.dto.auth;
-
-public record LoginDTO(String encodedData) {
-}

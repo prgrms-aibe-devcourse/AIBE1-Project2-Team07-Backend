@@ -1,11 +1,11 @@
 package org.lucky0111.pettalk.config.auth;
 
 
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.lucky0111.pettalk.handler.OAuth2LoginFailureHandler;
+import org.lucky0111.pettalk.handler.OAuth2LoginSuccessHandler;
 import org.lucky0111.pettalk.service.auth.CustomOAuth2UserService;
-import org.lucky0111.pettalk.util.auth.JWTFilter;
-import org.lucky0111.pettalk.util.auth.JWTUtil;
+import org.lucky0111.pettalk.util.auth.JwtFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,9 +14,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CsrfTokenRepository;
-import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
@@ -24,79 +21,61 @@ import java.util.Collections;
 import java.util.List;
 
 @Configuration
-@EnableWebSecurity
+@EnableWebSecurity(debug = true)
+@RequiredArgsConstructor
 public class SecurityConfig {
-
     private final CustomOAuth2UserService customOAuth2UserService;
-    private final CustomSuccessHandler customSuccessHandler;
-    private final JWTUtil jwtUtil;
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
+    private final JwtFilter jwtFilter;
+//    private final PreOAuth2AuthenticationFilter preOAuth2AuthenticationFilter;
 
-    @Value("${front.url}")
-    private String frontUrl;
-
-    public SecurityConfig(CustomOAuth2UserService customOAuth2UserService, CustomSuccessHandler customSuccessHandler, JWTUtil jwtUtil) {
-        this.customOAuth2UserService = customOAuth2UserService;
-        this.customSuccessHandler = customSuccessHandler;
-        this.jwtUtil = jwtUtil;
-    }
+    @Value("${DEV_SERVER_URL}")
+    String devServerUrl;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-
         http
-                .cors(corsCustomizer -> corsCustomizer.configurationSource(new CorsConfigurationSource() {
-
-                    @Override
-                    public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
-
-                        CorsConfiguration configuration = new CorsConfiguration();
-
-                        configuration.setAllowedOrigins(Collections.singletonList(frontUrl));
-                        configuration.setAllowedMethods(Collections.singletonList("*"));
-                        configuration.setAllowCredentials(true);
-                        configuration.setAllowedHeaders(Collections.singletonList("*"));
-                        configuration.setMaxAge(3600L);
-
-                        configuration.setExposedHeaders(Collections.singletonList("Set-Cookie"));
-                        configuration.setExposedHeaders(Collections.singletonList("Authorization"));
-
-                        return configuration;
-                    }
-                }))
-
-                //csrf disable
-                .csrf((auth) -> auth.disable())
-
-                //From 로그인 방식 disable
-                .formLogin((auth) -> auth.disable())
-
-                //HTTP Basic 인증 방식 disable
-                .httpBasic((auth) -> auth.disable())
-
-                //JWTFilter 추가
-                .addFilterBefore(new JWTFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class)
-
-                //oauth2
+                .cors(corsConfigurer -> corsConfigurer
+                        .configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
                 .oauth2Login((oauth2) -> oauth2
                         .userInfoEndpoint((userInfoEndpointConfig) -> userInfoEndpointConfig
                                 .userService(customOAuth2UserService))
-                        .successHandler(customSuccessHandler)
+                        .successHandler(oAuth2LoginSuccessHandler)
+                        .failureHandler(oAuth2LoginFailureHandler)
                 )
+//                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+//                .addFilterBefore(preOAuth2AuthenticationFilter, OAuth2AuthorizationRequestRedirectFilter.class)
 
                 //경로별 인가 작업
                 .authorizeHttpRequests((auth) -> auth
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**",
-                                "/swagger-ui.html", "/webjars/**", "/api-docs/**", "/api/v1/auth/register",
-                                "/api/v1/auth/check-nickname", "/api/v1/auth/refresh").permitAll()
-//                        .requestMatchers("/api/v1/auth/user-info", "/api/v1/auth/logout",
-//                                "/api/v1/auth/withdraw", "/api/v1/auth/profile",
-//                                "/api/v1/auth/token/validate", "/my").authenticated()
-                        .anyRequest().authenticated())
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api/v1/auth/**", "/").permitAll()
+//                        .requestMatchers("/api/v1/auth/**").authenticated()
+                        .anyRequest().permitAll())
 
                 //세션 설정 : STATELESS
                 .sessionManagement((session) -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        return request -> {
+            CorsConfiguration configuration = new CorsConfiguration();
+
+            configuration.setAllowedOrigins(List.of("http://localhost:3000/", devServerUrl));
+            configuration.setAllowedMethods(Collections.singletonList("*"));
+            configuration.setAllowedHeaders(Collections.singletonList("*"));
+            configuration.setAllowCredentials(true);
+            configuration.setMaxAge(3600L);
+            configuration.setExposedHeaders(Collections.singletonList("Authorization"));
+
+            return configuration;
+        };
     }
 }
