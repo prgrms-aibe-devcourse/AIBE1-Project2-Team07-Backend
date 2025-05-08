@@ -41,4 +41,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
             Pageable pageable);
 
     List<Comment> findByUser_UserId(UUID currentUserUUID);
+
+    @Query("SELECT c FROM Comment c JOIN FETCH c.user")
+    List<Comment> findAllWithUser();
 }
