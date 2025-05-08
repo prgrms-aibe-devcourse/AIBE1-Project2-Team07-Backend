@@ -90,7 +90,7 @@ public class JwtTokenProvider {
         cookie.setHttpOnly(true);
         cookie.setPath("/");
         cookie.setMaxAge((int) jwtUtil.getExpiresIn(token));
-        // cookie.setSecure(true); // TODO: prod로 배포할 때 활성화
+        cookie.setSecure(true); // TODO: prod로 배포할 때 활성화
         return cookie;
     }
 

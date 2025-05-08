@@ -30,8 +30,11 @@ public class SecurityConfig {
     private final JwtFilter jwtFilter;
 //    private final PreOAuth2AuthenticationFilter preOAuth2AuthenticationFilter;
 
-    @Value("${DEV_SERVER_URL}")
-    String devServerUrl;
+    @Value("${open-api.dev-server-url}")
+    private String devServerUrl;
+
+    @Value("${front-url}")
+    private String frontUrl;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -68,7 +71,7 @@ public class SecurityConfig {
         return request -> {
             CorsConfiguration configuration = new CorsConfiguration();
 
-            configuration.setAllowedOrigins(List.of("http://localhost:3000/", devServerUrl));
+            configuration.setAllowedOrigins(List.of("http://localhost:3000/", devServerUrl, frontUrl));
             configuration.setAllowedMethods(Collections.singletonList("*"));
             configuration.setAllowedHeaders(Collections.singletonList("*"));
             configuration.setAllowCredentials(true);

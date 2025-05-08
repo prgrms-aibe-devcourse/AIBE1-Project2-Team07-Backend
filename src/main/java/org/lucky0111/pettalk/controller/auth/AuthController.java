@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
+import org.lucky0111.pettalk.domain.common.TokenStatus;
 import org.lucky0111.pettalk.domain.common.TokenType;
 import org.lucky0111.pettalk.domain.dto.user.UserRegisterDTO;
 import org.lucky0111.pettalk.domain.dto.user.UserResponseDTO;
@@ -53,6 +54,10 @@ public class AuthController {
         Cookie[] cookies = request.getCookies();
         String accessToken = tokenService.extractTokenFromCookies(cookies, TokenType.ACCESS);
         String refreshToken = tokenService.extractTokenFromCookies(cookies, TokenType.REFRESH);
+
+        if (refreshToken == null || refreshToken.isEmpty()) {
+            throw new BadRequestException(TokenStatus.INVALIDATED.getDescription());
+        }
 
         UUID userId = tokenService.getUserId(refreshToken);
         PetUser petUser = userService.getUserById(userId);

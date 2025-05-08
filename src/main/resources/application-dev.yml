@@ -61,3 +61,5 @@ spring:
 
 open-api:
   dev-server-url: ${DEV_SERVER_URL}
+
+front-url: ${FRONT_URL}
