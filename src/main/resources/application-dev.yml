@@ -62,3 +62,12 @@ open-api:
   dev-server-url: ${DEV_SERVER_URL}
 
 front-url: ${FRONT_URL}
+
+langchain4j:
+  mcp:
+    sse-url: ${SSE_URL}
+  google-ai-gemini:
+    chat-model:
+      api-key: ${GEMINI_API_KEY}
+      model-name: ${GEMINI_MODEL}
+      log-requests-and-responses: true # prod에서는 비활성화
