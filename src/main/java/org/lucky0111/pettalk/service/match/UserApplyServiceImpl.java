@@ -51,7 +51,7 @@ public class UserApplyServiceImpl implements UserApplyService {
     @Transactional
     public UserApplyResponseDTO createApply(UserApplyRequestDTO requestDTO) {
         PetUser currentUser = getCurrentUser();
-        Trainer trainer = findTrainerByName(requestDTO.trainerName());
+        Trainer trainer = findTrainerByNickName(requestDTO.trainerNickName());
 
         validateNoPendingApply(currentUser.getUserId(), trainer.getTrainerId());
 
@@ -220,7 +220,6 @@ public class UserApplyServiceImpl implements UserApplyService {
         userApply.setPetBreed(requestDTO.petBreed());
         userApply.setPetMonthAge(requestDTO.petMonthAge());
         userApply.setContent(requestDTO.content());
-        userApply.setImageUrl(requestDTO.imageUrl());
         userApply.setApplyStatus(ApplyStatus.PENDING);
         return userApply;
     }
@@ -232,8 +231,8 @@ public class UserApplyServiceImpl implements UserApplyService {
         }
     }
 
-    private Trainer findTrainerByName(String trainerName) {
-        return trainerRepository.findByUser_Nickname(trainerName)
+    private Trainer findTrainerByNickName(String trainerNickName) {
+        return trainerRepository.findByUser_Nickname(trainerNickName)
                 .orElseThrow(() -> new CustomException(ErrorCode.APPLY_NOT_FOUND));
     }
 

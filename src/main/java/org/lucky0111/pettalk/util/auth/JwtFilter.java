@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.TokenStatus;
 import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
 import org.lucky0111.pettalk.service.auth.JwtTokenProvider;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -41,6 +42,13 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String accessToken = header.substring(7);
 
+        // GET 메서드는 필터 통과..
+        if (request.getMethod().equals(HttpMethod.GET.name())) {
+            SecurityContextHolder.getContext().setAuthentication(createAuthenticationToken(accessToken));
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         TokenStatus tokenStatus = tokenProvider.validateToken(accessToken);
 
         switch (tokenStatus) {
@@ -61,6 +69,11 @@ public class JwtFilter extends OncePerRequestFilter {
             }
         }
 
+        SecurityContextHolder.getContext().setAuthentication(createAuthenticationToken(accessToken));
+        filterChain.doFilter(request, response);
+    }
+
+    private UsernamePasswordAuthenticationToken createAuthenticationToken(String accessToken) {
         UUID userId = tokenProvider.getUserId(accessToken);
         List<String> roles = tokenProvider.getRoles(accessToken);
         List<GrantedAuthority> authorities = roles.stream()
@@ -68,17 +81,12 @@ public class JwtFilter extends OncePerRequestFilter {
                 .collect(Collectors.toList());
 
         CustomOAuth2User customOAuth2User = new CustomOAuth2User(userId.toString(), null, authorities);
-
-        UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken =
-                new UsernamePasswordAuthenticationToken(customOAuth2User, null, authorities);
-
-        SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
-        filterChain.doFilter(request, response);
+        return new UsernamePasswordAuthenticationToken(customOAuth2User, null, authorities);
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        String[] excludePath = {"/swagger-ui/**", "/v3/api-docs/**", "/api/v1/auth/**"};
+        String[] excludePath = {"/swagger-ui/**", "/v3/api-docs/**"};
         String path = request.getRequestURI();
         AntPathMatcher pathMatcher = new AntPathMatcher();
 

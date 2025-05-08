@@ -1,4 +1,4 @@
-package org.lucky0111.pettalk.service.llm;
+package org.lucky0111.pettalk.service.mcp;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
