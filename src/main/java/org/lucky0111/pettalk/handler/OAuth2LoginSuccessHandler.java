@@ -32,7 +32,6 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         String redirectUrl = UriComponentsBuilder
                 .fromUriString(oAuth2RedirectUrl)
-                .queryParam("code", "register")
                 .build()
                 .toUriString();
 
