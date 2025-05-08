@@ -18,7 +18,6 @@ spring:
 
   security:
     oauth2:
-      redirect-url: ${OAUTH2_REDIRECT_URL}
       client:
         registration:
           naver:
