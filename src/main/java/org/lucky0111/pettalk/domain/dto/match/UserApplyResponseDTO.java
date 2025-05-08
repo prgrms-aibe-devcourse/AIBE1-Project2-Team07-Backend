@@ -6,6 +6,7 @@ public record UserApplyResponseDTO(
         Long applyId,
         String userNickname,
         String userImageUrl,
+        String trainerName,
         String trainerNickname,
         String trainerImageUrl,
         String serviceType,

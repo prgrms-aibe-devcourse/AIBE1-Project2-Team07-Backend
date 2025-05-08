@@ -16,7 +16,6 @@ import org.lucky0111.pettalk.domain.dto.match.ApplyAnswerRequestDTO;
 import org.lucky0111.pettalk.domain.dto.match.ApplyAnswerResponseDTO;
 import org.lucky0111.pettalk.domain.dto.match.UserApplyRequestDTO;
 import org.lucky0111.pettalk.domain.dto.match.UserApplyResponseDTO;
-import org.lucky0111.pettalk.exception.CustomException;
 import org.lucky0111.pettalk.service.match.UserApplyService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
