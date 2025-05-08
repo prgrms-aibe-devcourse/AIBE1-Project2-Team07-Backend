@@ -19,8 +19,8 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
-    @Value("${spring.security.oauth2.redirect-url}")
-    private String oAuth2RedirectUrl;
+    @Value("${front-url}")
+    private String frontUrl;
 
     private final JwtTokenProvider tokenService;
 
@@ -31,11 +31,24 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         List<Cookie> cookies = tokenService.createTokenCookies(authentication);
 
         String redirectUrl = UriComponentsBuilder
-                .fromUriString(oAuth2RedirectUrl)
+                .fromUriString(frontUrl + "auth/oauth2/callback")
                 .build()
                 .toUriString();
 
-        cookies.forEach(res::addCookie);
+        for (Cookie cookie : cookies) {
+            String cookieHeader = String.format("%s=%s; Path=%s; Max-Age=%d; HttpOnly; Secure; SameSite=None",
+                    cookie.getName(),
+                    cookie.getValue(),
+                    cookie.getPath(),
+                    cookie.getMaxAge());
+
+            res.addHeader("Set-Cookie", cookieHeader);
+        }
+
+        // CORS 관련 헤더 추가
+        res.addHeader("Access-Control-Allow-Origin", frontUrl);
+        res.addHeader("Access-Control-Allow-Credentials", "true");
+
         res.sendRedirect(redirectUrl);
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
