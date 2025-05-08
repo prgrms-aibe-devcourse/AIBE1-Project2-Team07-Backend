@@ -4,7 +4,6 @@ import org.lucky0111.pettalk.domain.entity.trainer.Certification;
 
 import java.time.LocalDate;
 
-// Record는 불변 객체이며, 필드(컴포넌트)들을 정의하고 자동 생성되는 멤버들을 활용합니다.
 public record CertificationDTO(
         Long certId,
         String certName,

@@ -1,5 +1,7 @@
 package org.lucky0111.pettalk.domain.dto.trainer;
 
+import org.lucky0111.pettalk.domain.entity.trainer.Trainer;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -25,4 +27,4 @@ public record TrainerDTO(
         List<CertificationDTO> certifications, // Certification 목록
         double averageRating, // Review에서 계산
         long reviewCount // Review에서 계산
-) { }
+) {}
