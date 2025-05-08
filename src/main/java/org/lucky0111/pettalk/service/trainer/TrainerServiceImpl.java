@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -89,7 +88,7 @@ public class TrainerServiceImpl implements TrainerService {
         List<Certification> certifications = certificationRepository.findByTrainer_TrainerId(trainerId);
 
         return certifications.stream()
-                .map(CertificationDTO::fromEntity) // Certification 엔티티 -> CertificationDto Record 변환 (CertificationDto에 fromEntity 메소드 구현 필요)
+                .map(CertificationDTO::fromEntity)
                 .toList();
     }
 
@@ -138,16 +137,14 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
 
-    @Override
-    public void applyTrainer(UUID userId, TrainerApplicationRequestDTO applicationReq, List<MultipartFile> certificationFiles) {
-
+    public void applyTrainer(UUID userId, CertificationRequestDTO certificationDTO, MultipartFile certificationFile) {
         PetUser petUser = findAndValidateUser(userId);
+
         Trainer trainer = findOrCreateTrainer(userId, petUser);
 
-        processCertifications(trainer, applicationReq, certificationFiles);
+        SaveSingleCertification(trainer, certificationDTO, certificationFile);
 
         trainerRepository.save(trainer);
-
     }
 
     @Override
@@ -156,43 +153,10 @@ public class TrainerServiceImpl implements TrainerService {
         Trainer trainer = trainerRepository.findById(trainerId)
                 .orElseThrow(() -> new CustomException("트레이너를 찾을 수 없습니다 ID: %s".formatted(trainerId), HttpStatus.NOT_FOUND));
 
-        if (certificationFile == null || certificationFile.isEmpty()) {
-            throw new CustomException("자격증 파일이 첨부되지 않았거나 비어있습니다.", HttpStatus.BAD_REQUEST);
-        }
-        String fileUrl = null;
-//         String s3ObjectKey = null;
-        try {
-            // **** 3. 자격증 파일 S3 업로드 ****
-            String folderName = "certifications/";
-            fileUrl = fileUploaderService.uploadFile(certificationFile, folderName);
-//             s3ObjectKey = extractS3ObjectKeyFromUrl(fileUrl);
+        SaveSingleCertification(trainer, certificationDTO, certificationFile);
 
-            Certification certification = new Certification();
-            certification.setCertName(certificationDTO.certName());
-            certification.setIssuingBody(certificationDTO.issuingBody());
-            certification.setIssueDate(certificationDTO.issueDate());
-
-            certification.setFileUrl(fileUrl);
-            // certification.setS3ObjectKey(s3ObjectKey); // 필요하다면 Object Key 저장 (삭제 시 유용)
-            certification.setApproved(false);
-            trainer.addCertification(certification);
-            certificationRepository.save(certification);
-
-        } catch (Exception e) { // 파일 업로드, 엔티티 생성, DB 저장 중 발생 가능한 모든 예외를 잡습니다.
-            // **** 7. 오류 발생 시 정리 (고아 파일 삭제) ****
-            e.printStackTrace(); // 오류 로깅 (필수)
-
-            // S3 업로드가 성공했다면 (fileUrl이 null이 아니라면) 해당 파일 삭제 시도
-            if (fileUrl != null) {
-                try {
-                    fileUploaderService.deleteFile(fileUrl);
-                } catch (RuntimeException deleteException) {
-                    deleteException.printStackTrace();
-                }
-            }
-            throw new CustomException("자격증 정보 추가 및 파일 업로드 중 오류 발생", e, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
     }
+
     private PetUser findAndValidateUser(UUID userId) {
         // PetUserRepository를 사용하여 신청한 userId로 PetUser 엔티티를 조회합니다. (사용자가 없을 경우 예외 처리)
         PetUser petUser = petUserRepository.findById(userId)
@@ -215,48 +179,39 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
 
-    // 3. 자격증 목록 처리
-    private void processCertifications(Trainer trainer, TrainerApplicationRequestDTO applicationReq, List<MultipartFile> certificationFiles) {
-        List<CertificationRequestDTO> certRequests = applicationReq.certifications();
+    private void SaveSingleCertification(Trainer trainer, CertificationRequestDTO certificationDTO, MultipartFile certificationFile) {
 
-        // 초기 검증: 자격증 정보 목록이 null이거나 비어있으면 할 일이 없습니다.
-        if (certRequests == null || certRequests.isEmpty()) {
-            return;
-        }
-        // 초기 검증: 자격증 정보 목록과 첨부된 파일 목록의 개수 일치 확인
-        if (certRequests.size() != certificationFiles.size()) {
-            throw new IllegalArgumentException("제출된 자격증 정보 수와 첨부된 파일 수가 일치하지 않습니다.");
-        }
-        // 각 자격증 정보 DTO와 해당 파일을 순회하며 처리
-        for (int i = 0; i < certRequests.size(); i++) {
-            CertificationRequestDTO certReqDTO = certRequests.get(i);
-            MultipartFile certificationFile = certificationFiles.get(i);
-            processSingleCertification(trainer, certReqDTO, certificationFile);
-        }
-    }
-
-    // 개별 자격증 처리 (파일 업로드, Certification 엔티티 생성 및 저장) 로직을 분리한 메소드
-    private void processSingleCertification(Trainer trainer, CertificationRequestDTO certReqDTO, MultipartFile certificationFile) {
         String fileUrl = null;
-        if (certificationFile != null && !certificationFile.isEmpty()) {
-            try {
-                fileUrl = fileUploaderService.uploadFile(certificationFile, "certifications/"); // 폴더 이름 지정
-            } catch (IOException e) {
-                throw new CustomException("자격증 파일 업로드 중 입출력 오류 발생" + certificationFile.getOriginalFilename(), e , HttpStatus.INTERNAL_SERVER_ERROR);
-            } catch (Exception e) {
-                throw new CustomException("자격증 파일 업로드 중 알 수 없는 오류 발생" + certificationFile.getOriginalFilename(), e, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
+        if (certificationFile == null || certificationFile.isEmpty()) {
+            throw new CustomException("처리할 자격증 파일이 유효하지 않습니다.", HttpStatus.BAD_REQUEST);
         }
-        Certification certification = new Certification();
+        try {
+            String folderName = "certifications/";
+            fileUrl = fileUploaderService.uploadFile(certificationFile, folderName);
+            Certification certification = new Certification();
+            certification.setCertName(certificationDTO.certName());
+            certification.setIssuingBody(certificationDTO.issuingBody());
+            certification.setIssueDate(certificationDTO.issueDate());
+            certification.setFileUrl(fileUrl);
+            certification.setApproved(false);
 
-        certification.setTrainer(trainer);
-        certification.setCertName(certReqDTO.certName());
-        certification.setIssuingBody(certReqDTO.issuingBody());
-        certification.setIssueDate(certReqDTO.issueDate());
+            trainer.addCertification(certification);
 
-        certification.setFileUrl(fileUrl);
-        certification.setApproved(false);
-        certificationRepository.save(certification);
+            certificationRepository.save(certification);
+
+        } catch (Exception e) {
+            // 파일만 업로드 되고 그외 정보 업로드가 안됐을 시 고아파일을 제거.
+            e.printStackTrace();
+            if (fileUrl != null) {
+                try {
+                    fileUploaderService.deleteFile(fileUrl);
+                } catch (RuntimeException deleteException) {
+                    deleteException.printStackTrace();
+                }
+            }
+            throw new CustomException("자격증 처리 및 저장 중 오류 발생: " + e.getMessage(), e, HttpStatus.INTERNAL_SERVER_ERROR);
+
+        }
     }
 
 }

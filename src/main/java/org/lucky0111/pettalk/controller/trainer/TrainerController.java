@@ -2,8 +2,8 @@ package org.lucky0111.pettalk.controller.trainer;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
 import org.lucky0111.pettalk.domain.dto.trainer.CertificationRequestDTO;
-import org.lucky0111.pettalk.domain.dto.trainer.TrainerApplicationRequestDTO;
 import org.lucky0111.pettalk.domain.dto.trainer.TrainerDTO;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.service.trainer.TrainerService;
@@ -13,7 +13,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -29,15 +28,15 @@ public class TrainerController {
     }
 
     @PostMapping("/apply")
-    // @RequestPart 어노테이션으로 JSON 데이터와 파일 목록을 분리하여 받음
     public ResponseEntity<Void> applyForTrainer(
-            @RequestPart("request") TrainerApplicationRequestDTO applicationRequest, // 신청 정보 JSON
-            @RequestPart("files") List<MultipartFile> certificationFiles,
-            @RequestHeader("X-User-ID") UUID userId
+            @AuthenticationPrincipal CustomOAuth2User principal,
+            @RequestPart("certification") @Valid CertificationRequestDTO certificationDTO,
+            @RequestPart("file") MultipartFile certificationFile
     ) {
-        trainerService.applyTrainer(userId, applicationRequest, certificationFiles);
+        UUID userId = principal.getUserId();
+        trainerService.applyTrainer(userId, certificationDTO, certificationFile);
 
-        return ResponseEntity.accepted().build();
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @PostMapping("/{trainerId}/certifications")
