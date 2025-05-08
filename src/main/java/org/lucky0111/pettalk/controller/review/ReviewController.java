@@ -148,7 +148,7 @@ public class ReviewController {
             description = "applyId로 리뷰 목록을 조회합니다. 인증된 사용자만 접근 가능합니다."
     )
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<ReviewResponseDTO> getReviewByApplyId(@RequestParam Long applyId) {
+    public ResponseEntity<ReviewResponseDTO> getReviewByApplyId(@PathVariable Long applyId) {
         log.info("applyId로 목록 조회 요청");
         ReviewResponseDTO reviews = reviewService.getReviewByApplyId(applyId);
         return ResponseEntity.ok(reviews);
