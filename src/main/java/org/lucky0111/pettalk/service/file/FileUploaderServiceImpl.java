@@ -25,7 +25,7 @@ public class FileUploaderServiceImpl implements FileUploaderService {
     // **** FileUploaderService 인터페이스의 메소드 구현 ****
 
     @Override // 인터페이스 메소드 구현 명시
-    public String uploadFile(MultipartFile file, String folderName) throws IOException {
+    public String uploadFile(MultipartFile file, String folderName) {
         try {
             // 파일명을 UUID로 생성
             String fileName = folderName + UUID.randomUUID() + "_" + file.getOriginalFilename();

@@ -41,24 +41,25 @@ public class TrainerServiceImpl implements TrainerService {
     private final TrainerServiceFeeRepository trainerServiceFeeRepository;
 
     @Override
-    public TrainerDTO getTrainerDetails(UUID trainerId) {
+    @Transactional(readOnly = true)
+    public TrainerDTO getTrainerDetails(String trainerNickname) {
         // 1. Trainer 엔티티 조회 (ID는 UUID)
-        Trainer trainer = trainerRepository.findById(trainerId)
-                .orElseThrow(() -> new CustomException("훈련사 정보를 찾을 수 없습니다 ID: %s".formatted(trainerId), HttpStatus.NOT_FOUND));
+        Trainer trainer = trainerRepository.findByUser_Nickname(trainerNickname)
+                .orElseThrow(() -> new CustomException("훈련사 정보를 찾을 수 없습니다 ID: %s".formatted(trainerNickname), HttpStatus.NOT_FOUND));
 
         PetUser user = trainer.getUser();
 
         List<TrainerPhoto> photos = trainer.getPhotos();
         List<TrainerServiceFee> serviceFees = trainer.getServiceFees();
 
-        List<String> specializationNames = getSpecializationNames(trainerId);
-        List<CertificationDTO> certificationDtoList = getCertificationDTOList(trainerId);
+        List<String> specializationNames = getSpecializationNames(trainer.getTrainerId());
+        List<CertificationDTO> certificationDtoList = getCertificationDTOList(trainer.getTrainerId());
 
         List<TrainerPhotoDTO> photoDTOs = getPhotosDTO(photos);
         List<TrainerServiceFeeDTO> serviceFeeDTOs = getServiceFeesDTO(serviceFees);
 
 
-        ReviewStatsDTO reviewStatsDTO = getReviewStatsDTO(trainerId);
+        ReviewStatsDTO reviewStatsDTO = getReviewStatsDTO(trainer.getTrainerId());
 
 
         return new TrainerDTO(
