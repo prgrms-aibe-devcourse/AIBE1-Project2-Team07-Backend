@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.TokenStatus;
 import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
 import org.lucky0111.pettalk.service.auth.JwtTokenProvider;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -33,6 +34,12 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String header = request.getHeader("Authorization");
+
+        // GET 메서드는 필터 통과..
+        if (request.getMethod().equals(HttpMethod.GET.name())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         if (header == null || !header.startsWith("Bearer ")) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
@@ -78,7 +85,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        String[] excludePath = {"/swagger-ui/**", "/v3/api-docs/**", "/api/v1/auth/**"};
+        String[] excludePath = {"/swagger-ui/**", "/v3/api-docs/**"};
         String path = request.getRequestURI();
         AntPathMatcher pathMatcher = new AntPathMatcher();
 
