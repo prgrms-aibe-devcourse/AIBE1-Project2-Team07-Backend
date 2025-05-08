@@ -8,50 +8,71 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.TokenStatus;
+import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
 import org.lucky0111.pettalk.service.auth.JwtTokenProvider;
-import org.lucky0111.pettalk.service.user.UserService;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class JwtFilter extends OncePerRequestFilter {
     private final JwtTokenProvider tokenProvider;
-    private final UserService userService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        // TODO: 필터 구현 필요
-        String accessToken = request.getHeader("Authorization");
+        String header = request.getHeader("Authorization");
 
-        if (accessToken == null || accessToken.isEmpty()) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        if (header == null || !header.startsWith("Bearer ")) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
+
+        String accessToken = header.substring(7);
 
         TokenStatus tokenStatus = tokenProvider.validateToken(accessToken);
 
         switch (tokenStatus) {
             case AUTHENTICATED -> {
                 log.info("Access Token Validation Success");
-                
             }
 
             case EXPIRED -> {
                 log.info("Access Token Expired");
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                return;
             }
 
             case INVALIDATED -> {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                log.info("Access Token Invalidated");
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                return;
             }
         }
 
+        UUID userId = tokenProvider.getUserId(accessToken);
+        List<String> roles = tokenProvider.getRoles(accessToken);
+        List<GrantedAuthority> authorities = roles.stream()
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
+
+        CustomOAuth2User customOAuth2User = new CustomOAuth2User(userId.toString(), null, authorities);
+
+        UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken =
+                new UsernamePasswordAuthenticationToken(customOAuth2User, null, authorities);
+
+        SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
         filterChain.doFilter(request, response);
     }
 
