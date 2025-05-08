@@ -5,10 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.ErrorCode;
 import org.lucky0111.pettalk.domain.common.SortType;
 import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
-import org.lucky0111.pettalk.domain.dto.community.PostLikeResponseDTO;
-import org.lucky0111.pettalk.domain.dto.community.PostRequestDTO;
-import org.lucky0111.pettalk.domain.dto.community.PostResponseDTO;
-import org.lucky0111.pettalk.domain.dto.community.PostUpdateDTO;
+import org.lucky0111.pettalk.domain.dto.community.*;
 import org.lucky0111.pettalk.domain.entity.common.Tag;
 import org.lucky0111.pettalk.domain.common.PetCategory;
 import org.lucky0111.pettalk.domain.common.PostCategory;
@@ -76,7 +73,7 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PostResponseDTO> getAllPosts(int page, PostCategory postCategory, PetCategory petCategory, SortType sortType) {
+    public PostPageDTO getAllPosts(int page, PostCategory postCategory, PetCategory petCategory, SortType sortType) {
         UUID currentUserUUID = getCurrentUserUUID();
 
         Pageable pageable = PageRequest.of(page, PAGE_SIZE);
@@ -86,7 +83,9 @@ public class PostServiceImpl implements PostService {
         Page<Post> postsPage = postRepository.findAll(spec, pageable);
         List<Post> posts = postsPage.getContent();
 
-        return processPostsToResponses(posts, currentUserUUID);
+        List<PostResponseDTO> postResponses = processPostsToResponses(posts, currentUserUUID);
+
+        return new PostPageDTO(postResponses, page, postsPage.getSize(), postsPage.getTotalPages());
     }
 
     @Override
@@ -112,7 +111,7 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PostResponseDTO> searchPosts(
+    public PostPageDTO searchPosts(
             String keyword, int page, PostCategory postCategory,
             PetCategory petCategory, SortType sortType) {
 
@@ -125,7 +124,9 @@ public class PostServiceImpl implements PostService {
         Page<Post> postsPage = postRepository.findAll(spec, pageable);
         List<Post> posts = postsPage.getContent();
 
-        return processPostsToResponses(posts, currentUserUUID);
+        List<PostResponseDTO> postResponses = processPostsToResponses(posts, currentUserUUID);
+
+        return new PostPageDTO(postResponses, page, postsPage.getSize(), postsPage.getTotalPages());
     }
 
     @Override
