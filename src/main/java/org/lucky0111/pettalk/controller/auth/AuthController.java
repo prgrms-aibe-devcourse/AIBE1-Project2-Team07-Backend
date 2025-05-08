@@ -1,13 +1,12 @@
 package org.lucky0111.pettalk.controller.auth;
 
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.lucky0111.pettalk.domain.common.TokenStatus;
-import org.lucky0111.pettalk.domain.common.TokenType;
+import org.lucky0111.pettalk.domain.dto.auth.TokenDTO;
 import org.lucky0111.pettalk.domain.dto.user.UserRegisterDTO;
 import org.lucky0111.pettalk.domain.dto.user.UserResponseDTO;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
@@ -50,10 +49,13 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(HttpServletRequest request) throws BadRequestException, CredentialExpiredException {
-        Cookie[] cookies = request.getCookies();
-        String accessToken = tokenService.extractTokenFromCookies(cookies, TokenType.ACCESS);
-        String refreshToken = tokenService.extractTokenFromCookies(cookies, TokenType.REFRESH);
+    public ResponseEntity<?> login(@RequestBody TokenDTO tokens, HttpServletRequest request) throws BadRequestException, CredentialExpiredException {
+//        Cookie[] cookies = request.getCookies();
+//        String accessToken = tokenService.extractTokenFromCookies(cookies, TokenType.ACCESS);
+//        String refreshToken = tokenService.extractTokenFromCookies(cookies, TokenType.REFRESH);
+
+        String accessToken = tokens.accessToken();
+        String refreshToken = tokens.refreshToken();
 
         if (refreshToken == null || refreshToken.isEmpty()) {
             throw new BadRequestException(TokenStatus.INVALIDATED.getDescription());
