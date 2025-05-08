@@ -10,10 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.PetCategory;
 import org.lucky0111.pettalk.domain.common.PostCategory;
 import org.lucky0111.pettalk.domain.common.SortType;
-import org.lucky0111.pettalk.domain.dto.community.PostLikeResponseDTO;
-import org.lucky0111.pettalk.domain.dto.community.PostRequestDTO;
-import org.lucky0111.pettalk.domain.dto.community.PostResponseDTO;
-import org.lucky0111.pettalk.domain.dto.community.PostUpdateDTO;
+import org.lucky0111.pettalk.domain.dto.community.*;
 import org.lucky0111.pettalk.service.community.PostService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,7 +37,7 @@ public class PostController {
     @SecurityRequirement(name = "bearerAuth")
     @Operation(summary = "게시물 목록 조회", description = "게시물 목록을 페이지 단위로 조회합니다.")
     @GetMapping
-    public ResponseEntity<List<PostResponseDTO>> getAllPosts(
+    public ResponseEntity<PostPageDTO> getAllPosts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(required = false) PostCategory postCategory,
             @RequestParam(required = false) PetCategory petCategory,
@@ -48,20 +45,20 @@ public class PostController {
         log.info("게시물 목록 조회 요청: page={}, postCategoryId={}, petCategoryId={}",
                 page, postCategory, petCategory);
 
-        List<PostResponseDTO> posts = postService.getAllPosts(page, postCategory, petCategory, sortType);
+        PostPageDTO posts = postService.getAllPosts(page, postCategory, petCategory, sortType);
         return ResponseEntity.ok(posts);
     }
 
     @Operation(summary = "게시물 검색", description = "게시물 목록을 키워드로 검색합니다.")
     @GetMapping("/search")
-    public ResponseEntity<List<PostResponseDTO>> searchPosts(
+    public ResponseEntity<PostPageDTO> searchPosts(
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(required = false) PostCategory postCategory,
             @RequestParam(required = false) PetCategory petCategory,
             @RequestParam(defaultValue = "LATEST") SortType sortType) {
 
-        List<PostResponseDTO> posts = postService.searchPosts(
+        PostPageDTO posts = postService.searchPosts(
                 keyword, page, postCategory, petCategory, sortType);
 
         return ResponseEntity.ok(posts);
