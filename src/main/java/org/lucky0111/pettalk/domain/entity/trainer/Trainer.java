@@ -38,11 +38,21 @@ public class Trainer extends BaseTimeEntity {
     @Column(length = 1000)
     private String introduction; // 자기소개
 
+    // orphanRemoval = true: Trainer에서 Certification 연결이 끊어지면 해당 Certification 엔티티를 DB에서 삭제
+    @OneToMany(mappedBy = "trainer", cascade = CascadeType.PERSIST, orphanRemoval = true)
+    private List<Certification> certifications = new ArrayList<>();
+
     @OneToMany(mappedBy = "trainer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<TrainerPhoto> photos = new ArrayList<>();
 
     @OneToMany(mappedBy = "trainer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<TrainerServiceFee> serviceFees = new ArrayList<>();
+
+
+    public void addCertification(Certification certification) {
+        certifications.add(certification);
+        certification.setTrainer(this);
+    }
 
     public void addPhoto(TrainerPhoto photo) {
         photos.add(photo);
