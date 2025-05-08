@@ -35,18 +35,19 @@ public class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String header = request.getHeader("Authorization");
 
-        // GET 메서드는 필터 통과..
-        if (request.getMethod().equals(HttpMethod.GET.name())) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         if (header == null || !header.startsWith("Bearer ")) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
 
         String accessToken = header.substring(7);
+
+        // GET 메서드는 필터 통과..
+        if (request.getMethod().equals(HttpMethod.GET.name())) {
+            SecurityContextHolder.getContext().setAuthentication(createAuthenticationToken(accessToken));
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         TokenStatus tokenStatus = tokenProvider.validateToken(accessToken);
 
@@ -68,6 +69,11 @@ public class JwtFilter extends OncePerRequestFilter {
             }
         }
 
+        SecurityContextHolder.getContext().setAuthentication(createAuthenticationToken(accessToken));
+        filterChain.doFilter(request, response);
+    }
+
+    private UsernamePasswordAuthenticationToken createAuthenticationToken(String accessToken) {
         UUID userId = tokenProvider.getUserId(accessToken);
         List<String> roles = tokenProvider.getRoles(accessToken);
         List<GrantedAuthority> authorities = roles.stream()
@@ -75,12 +81,7 @@ public class JwtFilter extends OncePerRequestFilter {
                 .collect(Collectors.toList());
 
         CustomOAuth2User customOAuth2User = new CustomOAuth2User(userId.toString(), null, authorities);
-
-        UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken =
-                new UsernamePasswordAuthenticationToken(customOAuth2User, null, authorities);
-
-        SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
-        filterChain.doFilter(request, response);
+        return new UsernamePasswordAuthenticationToken(customOAuth2User, null, authorities);
     }
 
     @Override
