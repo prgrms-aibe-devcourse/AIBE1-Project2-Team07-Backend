@@ -71,6 +71,8 @@ public class JwtUtil {
         try {
             Jwts.parser().verifyWith(jwtConfig.getSecretKey()).build().parseSignedClaims(token);
             return TokenStatus.AUTHENTICATED;
+        } catch (SignatureException e) {
+            log.info("Token Signature Invalid: {}", e.getMessage());
         } catch (SecurityException | MalformedJwtException e) {
             log.info("Token Invalid: {}", e.getMessage());
         } catch (ExpiredJwtException e) {
