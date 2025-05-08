@@ -22,6 +22,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -56,7 +57,7 @@ public class UserApplyController {
     )
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<UserApplyResponseDTO> createApply(@RequestBody UserApplyRequestDTO requestDTO) {
-        log.info("신청서 제출 요청: trainerId={}", requestDTO.trainerName());
+        log.info("신청서 제출 요청: trainerNickName={}", requestDTO.trainerNickName());
         UserApplyResponseDTO responseDTO = userApplyService.createApply(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
