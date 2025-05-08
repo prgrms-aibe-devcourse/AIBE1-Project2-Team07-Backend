@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface TrainerService {
-    TrainerDTO getTrainerDetails(UUID trainerId);
+    TrainerDTO getTrainerDetails(String trainerId);
 
     // 사용자 ID, 신청 정보, 자격증 파일 목록을 받아 훈련사 신청 처리
     void applyTrainer(UUID userId, TrainerApplicationRequestDTO applicationReq, List<MultipartFile> certificationFiles);

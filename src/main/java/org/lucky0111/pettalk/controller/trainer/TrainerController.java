@@ -21,9 +21,9 @@ import java.util.UUID;
 public class TrainerController {
     private final TrainerService trainerService;
 
-    @GetMapping("/{trainerId}")
-    public ResponseEntity<TrainerDTO> getTrainer(@PathVariable UUID trainerId) {
-        TrainerDTO dto = trainerService.getTrainerDetails(trainerId);
+    @GetMapping("/{trainerNickname}")
+    public ResponseEntity<TrainerDTO> getTrainer(@PathVariable String trainerNickname) {
+        TrainerDTO dto = trainerService.getTrainerDetails(trainerNickname);
         return ResponseEntity.ok().body(dto);
     }
 
