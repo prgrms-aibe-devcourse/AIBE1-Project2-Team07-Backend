@@ -200,8 +200,7 @@ public class TrainerServiceImpl implements TrainerService {
         String fileUrl = null;
         if (certificationFile != null && !certificationFile.isEmpty()) {
             try {
-                fileUrl = fileUploaderService.uploadFile(certificationFile);
-                // 추가 예정
+                fileUrl = fileUploaderService.uploadFile(certificationFile, "certifications/"); // 폴더 이름 지정
             } catch (IOException e) {
                 throw new CustomException("자격증 파일 업로드 중 입출력 오류 발생" + certificationFile.getOriginalFilename(), e , HttpStatus.INTERNAL_SERVER_ERROR);
             } catch (Exception e) {
