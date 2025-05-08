@@ -24,4 +24,5 @@ public interface ReviewService {
 
     List<ReviewResponseDTO> getTopLikedReviews(int limit);
 
+    ReviewResponseDTO getReviewByApplyId(Long applyId);
 }

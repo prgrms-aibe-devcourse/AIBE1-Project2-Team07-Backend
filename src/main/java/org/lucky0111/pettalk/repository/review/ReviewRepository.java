@@ -66,6 +66,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
                 ));
     }
 
+    Review findByUserApply_ApplyId(Long applyId);
+
     interface TrainerRatingProjection {
         UUID getTrainerId();
         Double getAvgRating();
