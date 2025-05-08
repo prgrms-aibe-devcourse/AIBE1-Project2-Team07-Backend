@@ -12,6 +12,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.ApplyStatus;
+import org.lucky0111.pettalk.domain.dto.match.ApplyAnswerRequestDTO;
+import org.lucky0111.pettalk.domain.dto.match.ApplyAnswerResponseDTO;
 import org.lucky0111.pettalk.domain.dto.match.UserApplyRequestDTO;
 import org.lucky0111.pettalk.domain.dto.match.UserApplyResponseDTO;
 import org.lucky0111.pettalk.service.match.UserApplyService;
@@ -97,7 +99,6 @@ public class UserApplyController {
                     "message", "신청 목록을 성공적으로 조회했습니다."
             ));
         } else {
-            // 페이징 처리하여 결과 반환
             Pageable pageable = PageRequest.of(page, PAGE_SIZE, Sort.by("createdAt").descending());
             Page<UserApplyResponseDTO> pagedResult = applyStatus != null
                     ? userApplyService.getUserAppliesByStatusPaged(applyStatus, pageable)
@@ -112,6 +113,19 @@ public class UserApplyController {
                     "message", "신청 목록을 성공적으로 조회했습니다."
             ));
         }
+    }
+
+    @GetMapping("/{applyId}/answer")
+    @Operation(
+            summary = "매칭 신청에 대한 응답 메시지 조회",
+            description = "매칭 신청에 대한 트레이너의 응답 메시지를 조회합니다.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<?> getApplyAnswer(@PathVariable Long applyId) {
+        ApplyAnswerResponseDTO responseDTO = userApplyService.getApplyAnswer(applyId);
+
+        return ResponseEntity.ok(responseDTO);
     }
 
     @GetMapping("/trainer")
@@ -169,39 +183,21 @@ public class UserApplyController {
         }
     }
 
-    @PatchMapping("/{applyId}/status")
+    @PostMapping("/{applyId}/status")
     @Operation(
-            summary = "매칭 신청 상태 업데이트",
-            description = "트레이너가 매칭 신청의 상태를 업데이트합니다(승인/거절 등). 트레이너 또는 관리자 권한이 필요합니다.",
+            summary = "매칭 신청 상태 업데이트 (응답 메시지 포함)",
+            description = "트레이너가 매칭 신청의 상태를 업데이트하고 응답 메시지를 추가합니다.",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
     public ResponseEntity<?> updateApplyStatus(
-            @PathVariable Long applyId,
-            @RequestBody ApplyStatus applyStatusRequest) {
+            @RequestBody ApplyAnswerRequestDTO answerDTO) {
+        log.info("신청 상태 업데이트 요청");
 
-        log.info("신청 상태 업데이트 요청: applyId={}, status={}", applyId, applyStatusRequest);
+        UserApplyResponseDTO responseDTO = userApplyService.updateApplyStatusWithResponse(answerDTO);
 
-        // 상태 유효성 검사
-        ApplyStatus applyStatus;
-        try {
-            applyStatus = applyStatusRequest;
-        } catch (IllegalArgumentException | NullPointerException e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "유효하지 않은 상태 값입니다."
-            ));
-        }
-
-        // 상태 업데이트 서비스 호출
-        UserApplyResponseDTO responseDTO = userApplyService.updateApplyStatus(applyId, applyStatus);
-
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "data", responseDTO,
-                "message", "신청 상태가 성공적으로 업데이트되었습니다."
-        ));
+        return ResponseEntity.ok(responseDTO);
     }
 
     @DeleteMapping("/{applyId}/delete")
@@ -216,10 +212,6 @@ public class UserApplyController {
 
         UserApplyResponseDTO responseDTO = userApplyService.deleteApply(applyId);
 
-        return ResponseEntity.ok(Map.of(
-                "success", true,
-                "data", responseDTO,
-                "message", "신청이 성공적으로 삭제되었습니다."
-        ));
+        return ResponseEntity.ok(responseDTO);
     }
 }

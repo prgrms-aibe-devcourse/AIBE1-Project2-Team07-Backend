@@ -1,6 +1,5 @@
 package org.lucky0111.pettalk.service.community;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.ErrorCode;

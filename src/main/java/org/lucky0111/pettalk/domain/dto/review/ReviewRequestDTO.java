@@ -12,7 +12,7 @@ public record ReviewRequestDTO(
 ) {
         public ReviewRequestDTO {
                 if (rating == null || rating < 1 || rating > 5) {
-                        throw new CustomException("rating은 1~5 사이여야 합니다.", HttpStatus.BAD_REQUEST);
+                        throw new CustomException("평점은 1~5 사이여야 합니다.", HttpStatus.BAD_REQUEST);
                 }
         }
 }

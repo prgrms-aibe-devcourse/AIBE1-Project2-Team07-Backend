@@ -14,7 +14,7 @@ public interface ReviewService {
 
     void deleteReview(Long reviewId);
 
-    List<ReviewResponseDTO> getReviewsByTrainerName(String trainerName);
+    List<ReviewResponseDTO> getReviewsByTrainerNickname(String trainerNickname);
 
     List<ReviewResponseDTO> getMyReviews();
 
