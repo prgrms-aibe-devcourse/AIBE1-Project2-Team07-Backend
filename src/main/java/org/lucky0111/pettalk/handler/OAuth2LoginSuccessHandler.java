@@ -30,24 +30,30 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                                         Authentication authentication) throws IOException, ServletException {
         List<Cookie> cookies = tokenService.createTokenCookies(authentication);
 
+
+        String accessToken = tokenService.createAccessToken(authentication);
+        String refreshToken = tokenService.createRefreshToken(authentication);
+
         String redirectUrl = UriComponentsBuilder
                 .fromUriString(frontUrl + "auth/oauth2/callback")
+                .queryParam("accessToken", accessToken)
+                .queryParam("refreshToken", refreshToken)
                 .build()
                 .toUriString();
-
-        for (Cookie cookie : cookies) {
-            String cookieHeader = String.format("%s=%s; Path=%s; Max-Age=%d; HttpOnly; Secure; SameSite=None",
-                    cookie.getName(),
-                    cookie.getValue(),
-                    cookie.getPath(),
-                    cookie.getMaxAge());
-
-            res.addHeader("Set-Cookie", cookieHeader);
-        }
+//
+//        for (Cookie cookie : cookies) {
+//            String cookieHeader = String.format("%s=%s; Path=%s; Max-Age=%d; HttpOnly; Secure; SameSite=None",
+//                    cookie.getName(),
+//                    cookie.getValue(),
+//                    cookie.getPath(),
+//                    cookie.getMaxAge());
+//
+//            res.addHeader("Set-Cookie", cookieHeader);
+//        }
 
         // CORS 관련 헤더 추가
-        res.addHeader("Access-Control-Allow-Origin", frontUrl);
-        res.addHeader("Access-Control-Allow-Credentials", "true");
+//        res.addHeader("Access-Control-Allow-Origin", frontUrl);
+//        res.addHeader("Access-Control-Allow-Credentials", "true");
 
         res.sendRedirect(redirectUrl);
         SecurityContextHolder.getContext().setAuthentication(authentication);

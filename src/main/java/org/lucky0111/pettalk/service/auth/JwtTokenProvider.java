@@ -51,6 +51,20 @@ public class JwtTokenProvider {
         );
     }
 
+    public String createAccessToken(Authentication authentication) {
+        CustomOAuth2User oauthUser = (CustomOAuth2User) authentication.getPrincipal();
+        UUID userId = UUID.fromString(oauthUser.getName());
+        List<String> roles = extractRoles(authentication);
+        return jwtUtil.createJwt(TokenType.ACCESS, userId, roles);
+    }
+
+    public String createRefreshToken(Authentication authentication) {
+        CustomOAuth2User oauthUser = (CustomOAuth2User) authentication.getPrincipal();
+        UUID userId = UUID.fromString(oauthUser.getName());
+        List<String> roles = extractRoles(authentication);
+        return jwtUtil.createJwt(TokenType.REFRESH, userId, roles);
+    }
+
     @Transactional
     public String reissue(PetUser petUser, String refreshToken) throws BadRequestException {
         TokenStatus status = validateToken(refreshToken);
