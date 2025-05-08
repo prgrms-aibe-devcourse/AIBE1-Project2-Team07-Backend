@@ -1,8 +1,8 @@
-package org.lucky0111.pettalk.controller.llm;
+package org.lucky0111.pettalk.controller.mcp;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.lucky0111.pettalk.service.llm.McpService;
+import org.lucky0111.pettalk.service.mcp.McpService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

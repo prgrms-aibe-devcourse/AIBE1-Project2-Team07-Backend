@@ -8,6 +8,7 @@ import java.util.UUID;
 public record TrainerDTO(
         UUID trainerId, // Trainer의 ID는 UUID
 
+        String name,
         String nickname, // PetUser에서 가져옴
         String profileImageUrl, // PetUser에서 가져옴
         String email, // PetUser에서 가져옴

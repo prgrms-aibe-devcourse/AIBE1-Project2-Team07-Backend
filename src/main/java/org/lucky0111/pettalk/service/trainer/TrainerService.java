@@ -2,6 +2,8 @@ package org.lucky0111.pettalk.service.trainer;
 
 import org.lucky0111.pettalk.domain.dto.trainer.CertificationRequestDTO;
 import org.lucky0111.pettalk.domain.dto.trainer.TrainerDTO;
+import org.lucky0111.pettalk.domain.dto.trainer.TrainerPageDTO;
+import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
@@ -15,4 +17,5 @@ public interface TrainerService {
 
     void addCertification(UUID trainerId, CertificationRequestDTO certificationDTO, MultipartFile certificationFile);
 
+    TrainerPageDTO getAllTrainers(int page, int size);
 }
