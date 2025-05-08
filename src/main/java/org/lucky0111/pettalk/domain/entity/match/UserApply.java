@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
 import org.lucky0111.pettalk.domain.common.ApplyStatus;
+import org.lucky0111.pettalk.domain.common.ServiceType;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.domain.entity.trainer.Trainer;
 
@@ -30,6 +31,10 @@ public class UserApply extends BaseTimeEntity {
     @JoinColumn(name = "trainer_id")
     private Trainer trainer;
 
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private ServiceType serviceType;
+
     @Column(length = 100, nullable = false)
     private String petType;
 
@@ -46,4 +51,7 @@ public class UserApply extends BaseTimeEntity {
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private ApplyStatus applyStatus;
+
+    @Column(nullable = false)
+    private boolean hasReviewed = false;
 }

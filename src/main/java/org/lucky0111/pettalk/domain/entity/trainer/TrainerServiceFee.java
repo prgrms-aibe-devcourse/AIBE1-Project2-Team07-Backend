@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
+import org.lucky0111.pettalk.domain.common.ServiceType;
 
 import java.math.BigDecimal;
 
@@ -27,7 +28,7 @@ public class TrainerServiceFee extends BaseTimeEntity {
     // 교육 종류 (방문 교육, 영상 교육 등)
     @Enumerated(EnumType.STRING) // Enum 상수의 이름을 문자열로 DB에 저장
     @Column(name = "service_type", nullable = false)
-    private TrainerServiceFeeType serviceType; // <--- TrainerServiceFeeType Enum 사용
+    private ServiceType serviceType; // <--- TrainerServiceFeeType Enum 사용
 
     // 교육 시간 (분 단위)
     @Column(name = "duration_minutes", nullable = false)

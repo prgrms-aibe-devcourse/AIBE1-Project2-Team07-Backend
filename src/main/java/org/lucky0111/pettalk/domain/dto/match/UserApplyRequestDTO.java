@@ -1,9 +1,10 @@
 package org.lucky0111.pettalk.domain.dto.match;
 
-import java.util.UUID;
+import org.lucky0111.pettalk.domain.common.ServiceType;
 
 public record UserApplyRequestDTO(
         String trainerName,
+        ServiceType serviceType,
         String petType,
         String petBreed,
         Integer petMonthAge,

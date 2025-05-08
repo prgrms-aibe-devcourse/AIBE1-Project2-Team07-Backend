@@ -87,10 +87,10 @@ public class ReviewController {
             description = "특정 훈련사의 리뷰 목록을 조회합니다. 인증된 사용자만 접근 가능합니다."
     )
     @SecurityRequirement(name = "bearerAuth")
-    @GetMapping("/trainers/{trainerName}")
-    public ResponseEntity<List<ReviewResponseDTO>> getReviewsByTrainerId(@PathVariable String trainerName) {
-        log.info("훈련사 별 리뷰 목록 조회 요청: trainerName={}", trainerName);
-        List<ReviewResponseDTO> reviews = reviewService.getReviewsByTrainerName(trainerName);
+    @GetMapping("/trainers/{trainerNickname}")
+    public ResponseEntity<List<ReviewResponseDTO>> getReviewsByTrainerId(@PathVariable String trainerNickname) {
+        log.info("훈련사 별 리뷰 목록 조회 요청: trainerNickname={}", trainerNickname);
+        List<ReviewResponseDTO> reviews = reviewService.getReviewsByTrainerNickname(trainerNickname);
         return ResponseEntity.ok(reviews);
     }
 

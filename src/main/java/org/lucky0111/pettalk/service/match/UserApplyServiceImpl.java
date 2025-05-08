@@ -4,23 +4,31 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.ErrorCode;
 import org.lucky0111.pettalk.domain.common.ApplyStatus;
+import org.lucky0111.pettalk.domain.common.ApplyReason;
 import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
+import org.lucky0111.pettalk.domain.dto.match.ApplyAnswerRequestDTO;
+import org.lucky0111.pettalk.domain.dto.match.ApplyAnswerResponseDTO;
 import org.lucky0111.pettalk.domain.dto.match.UserApplyRequestDTO;
 import org.lucky0111.pettalk.domain.dto.match.UserApplyResponseDTO;
+import org.lucky0111.pettalk.domain.entity.match.ApplyAnswer;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.domain.entity.trainer.Trainer;
 import org.lucky0111.pettalk.domain.entity.match.UserApply;
 import org.lucky0111.pettalk.exception.CustomException;
+import org.lucky0111.pettalk.repository.match.ApplyAnswerRepository;
 import org.lucky0111.pettalk.repository.match.UserApplyRepository;
+import org.lucky0111.pettalk.repository.review.ReviewRepository;
 import org.lucky0111.pettalk.repository.trainer.TrainerRepository;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
@@ -34,6 +42,8 @@ public class UserApplyServiceImpl implements UserApplyService {
     private final UserApplyRepository userApplyRepository;
     private final PetUserRepository petUserRepository;
     private final TrainerRepository trainerRepository;
+    private final ApplyAnswerRepository applyAnswerRepository;
+    private final ReviewRepository reviewRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -155,12 +165,57 @@ public class UserApplyServiceImpl implements UserApplyService {
         return trainerAppliesPage.map(this::convertToResponseDTO);
     }
 
-    // 리팩토링된 private 메소드들
+    @Override
+    @Transactional
+    public UserApplyResponseDTO updateApplyStatusWithResponse(ApplyAnswerRequestDTO requestDTO) {
+        PetUser currentUser = getCurrentUser();
+        UserApply userApply = findApplyById(requestDTO.applyId());
+
+        validateTrainerPermission(userApply, currentUser.getUserId());
+
+        userApply.setApplyStatus(requestDTO.applyStatus());
+        UserApply updatedApply = userApplyRepository.save(userApply);
+
+        ApplyAnswer applyAnswer = applyAnswerRepository.findByUserApply(userApply)
+                .orElse(new ApplyAnswer());
+
+        applyAnswer.setUserApply(userApply);
+        applyAnswer.setContent(requestDTO.content());
+        if (requestDTO.applyStatus() == ApplyStatus.REJECTED) {
+            applyAnswer.setApplyReason(requestDTO.applyReason());
+        } else {
+            applyAnswer.setApplyReason(ApplyReason.ACCEPTED);
+        }
+
+        applyAnswerRepository.save(applyAnswer);
+
+        return convertToResponseDTO(updatedApply);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ApplyAnswerResponseDTO getApplyAnswer(Long applyId) {
+        UserApply userApply = findApplyById(applyId);
+
+        PetUser currentUser = getCurrentUser();
+        boolean isApplicant = userApply.getPetUser().getUserId().equals(currentUser.getUserId());
+        boolean isTrainer = userApply.getTrainer().getTrainerId().equals(currentUser.getUserId());
+
+        if (!isApplicant && !isTrainer) {
+            throw new CustomException(ErrorCode.PERMISSION_DENIED);
+        }
+
+        ApplyAnswer response = applyAnswerRepository.findByUserApply(userApply)
+                .orElseThrow(() -> new CustomException("응답 메시지가 없습니다.", HttpStatus.NOT_FOUND));
+
+        return convertToApplyResponseDTO(response);
+    }
 
     private UserApply buildUserApplyFromRequest(UserApplyRequestDTO requestDTO, PetUser petUser, Trainer trainer) {
         UserApply userApply = new UserApply();
         userApply.setPetUser(petUser);
         userApply.setTrainer(trainer);
+        userApply.setServiceType(requestDTO.serviceType());
         userApply.setPetType(requestDTO.petType());
         userApply.setPetBreed(requestDTO.petBreed());
         userApply.setPetMonthAge(requestDTO.petMonthAge());
@@ -205,6 +260,21 @@ public class UserApplyServiceImpl implements UserApplyService {
                 .collect(Collectors.toList());
     }
 
+    private ApplyAnswerResponseDTO convertToApplyResponseDTO(ApplyAnswer applyAnswer) {
+        String createdAtStr = formatDateTime(applyAnswer.getCreatedAt());
+        String updatedAtStr = formatDateTime(applyAnswer.getUpdatedAt());
+
+        return new ApplyAnswerResponseDTO(
+                applyAnswer.getResponseId(),
+                applyAnswer.getUserApply().getApplyId(),
+                applyAnswer.getUserApply().getTrainer().getUser().getNickname(),
+                applyAnswer.getUserApply().getTrainer().getUser().getProfileImageUrl(),
+                applyAnswer.getContent(),
+                createdAtStr,
+                updatedAtStr
+        );
+    }
+
     private UUID getCurrentUserUUID() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -228,20 +298,24 @@ public class UserApplyServiceImpl implements UserApplyService {
 
         return new UserApplyResponseDTO(
                 userApply.getApplyId(),
-                userApply.getPetUser().getName(),
-                userApply.getTrainer().getUser().getName(),
+                userApply.getPetUser().getNickname(),
+                userApply.getPetUser().getProfileImageUrl(),
+                userApply.getTrainer().getUser().getNickname(),
+                userApply.getTrainer().getUser().getProfileImageUrl(),
+                userApply.getServiceType().getDescription(),
                 userApply.getPetType(),
                 userApply.getPetBreed(),
                 userApply.getPetMonthAge(),
                 userApply.getContent(),
                 userApply.getImageUrl(),
                 userApply.getApplyStatus(),
+                userApply.isHasReviewed(),
                 createdAtStr,
                 updatedAtStr
         );
     }
 
-    private String formatDateTime(java.time.LocalDateTime dateTime) {
+    private String formatDateTime(LocalDateTime dateTime) {
         return dateTime != null ? dateTime.format(DATE_FORMATTER) : null;
     }
 }

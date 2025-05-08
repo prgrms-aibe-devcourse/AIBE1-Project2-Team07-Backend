@@ -53,6 +53,9 @@ public class ReviewServiceImpl implements ReviewService {
         validateApplyStatus(userApply);
         validateNoExistingReview(userApply);
 
+        userApply.setHasReviewed(true);
+        userApplyRepository.save(userApply);
+
         Review review = buildReviewFromRequest(requestDTO, userApply);
         Review savedReview = reviewRepository.save(review);
 
@@ -89,15 +92,19 @@ public class ReviewServiceImpl implements ReviewService {
         UUID currentUserUUID = getCurrentUserUUID();
         Review review = findReviewById(reviewId);
 
+        UserApply userApply = review.getUserApply();
+        userApply.setHasReviewed(false);
+        userApplyRepository.save(userApply);
+
         validateReviewOwnership(review, currentUserUUID);
         reviewRepository.delete(review);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReviewResponseDTO> getReviewsByTrainerName(String trainerName) {
+    public List<ReviewResponseDTO> getReviewsByTrainerNickname(String trainerNickname) {
         UUID currentUserUUID = getCurrentUserUUID();
-        Trainer trainer = trainerRepository.findByUser_Nickname(trainerName)
+        Trainer trainer = trainerRepository.findByUser_Nickname(trainerNickname)
                 .orElseThrow(() -> new CustomException(ErrorCode.TRAINER_NOT_FOUND));
 
         List<Review> reviews = reviewRepository.findByUserApply_Trainer_TrainerId(trainer.getTrainerId());
