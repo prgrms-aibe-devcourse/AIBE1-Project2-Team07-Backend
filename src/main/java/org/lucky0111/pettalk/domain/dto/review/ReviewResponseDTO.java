@@ -9,7 +9,6 @@ public record ReviewResponseDTO(
         String trainerNickname,
         String trainerImageUrl,
         Integer rating,
-        String title,
         String comment,
         String reviewImageUrl,
         Integer likeCount,

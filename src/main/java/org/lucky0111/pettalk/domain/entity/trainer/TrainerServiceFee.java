@@ -7,8 +7,6 @@ import lombok.Setter;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
 import org.lucky0111.pettalk.domain.common.ServiceType;
 
-import java.math.BigDecimal;
-
 @Entity
 @Getter
 @Setter
@@ -35,6 +33,6 @@ public class TrainerServiceFee extends BaseTimeEntity {
     private Integer durationMinutes; // 교육 시간 (분)
 
     // 요금
-    @Column(name = "fee_amount", nullable = false, precision = 10, scale = 2) // BigDecimal은 정밀도(precision)와 스케일(scale) 설정 필요
-    private BigDecimal feeAmount; // 요금 (정확한 계산 위해 BigDecimal 사용)
+    @Column(name = "fee_amount", nullable = false)
+    private Integer feeAmount; // 요금 (정확한 계산 위해 BigDecimal 사용)
 }

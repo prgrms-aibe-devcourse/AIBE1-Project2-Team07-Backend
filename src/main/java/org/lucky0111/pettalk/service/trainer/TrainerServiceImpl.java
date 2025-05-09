@@ -2,6 +2,9 @@ package org.lucky0111.pettalk.service.trainer;
 
 import com.sun.jdi.request.DuplicateRequestException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.lucky0111.pettalk.domain.common.TrainerSearchType;
+import org.lucky0111.pettalk.domain.common.TrainerSortType;
 import org.lucky0111.pettalk.domain.common.UserRole;
 import org.lucky0111.pettalk.domain.dto.review.ReviewStatsDTO;
 import org.lucky0111.pettalk.domain.dto.trainer.*;
@@ -46,10 +49,22 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     @Transactional(readOnly = true)
-    public TrainerPageDTO getAllTrainers(int page, int size){
+    public TrainerPageDTO getAllTrainers(int page, int size, TrainerSortType sortType) {
         Pageable pageable = PageRequest.of(page, size);
 
-        List<Trainer> trainers = trainerRepository.findAllWithPhotosAndServiceFees(pageable);
+        List<Trainer> trainers;
+        switch (sortType) {
+            case REVIEWS:
+                trainers = trainerRepository.findAllWithPhotosAndServiceFeesByReviewCount(pageable);
+                break;
+            case RATING:
+                trainers = trainerRepository.findAllWithPhotosAndServiceFeesByRating(pageable);
+                break;
+            case LATEST:
+            default:
+                trainers = trainerRepository.findAllWithPhotosAndServiceFeesByLatest(pageable);
+                break;
+        }
 
         long totalTrainers = trainerRepository.countTrainers();
         int totalPages = (int) Math.ceil((double) totalTrainers / size);
@@ -59,9 +74,47 @@ public class TrainerServiceImpl implements TrainerService {
                 .collect(Collectors.toList());
 
         Map<UUID, List<CertificationDTO>> certificationMap = getCertificationMapForTrainers(trainerIds);
-
         Map<UUID, List<String>> specializationMap = getSpecializationMapForTrainers(trainerIds);
+        Map<UUID, ReviewStatsDTO> reviewStatsMap = getReviewStatsMapForTrainers(trainerIds);
 
+        List<TrainerDTO> trainerDTOs = trainers.stream()
+                .map(trainer -> convertToTrainerDTO(
+                        trainer,
+                        getPhotosDTO(trainer.getPhotos()),
+                        getServiceFeesDTO(trainer.getServiceFees()),
+                        specializationMap.getOrDefault(trainer.getTrainerId(), Collections.emptyList()),
+                        certificationMap.getOrDefault(trainer.getTrainerId(), Collections.emptyList()),
+                        reviewStatsMap.getOrDefault(trainer.getTrainerId(), new ReviewStatsDTO(0.0, 0L))
+                ))
+                .collect(Collectors.toList());
+
+        return new TrainerPageDTO(trainerDTOs, page, size, totalPages);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TrainerPageDTO searchTrainers(String keyword, TrainerSearchType searchType, int page, int size, TrainerSortType sortType) {
+        int offset = page * size;
+
+        List<Trainer> trainers = trainerRepository.searchTrainersWithSort(
+                keyword,
+                searchType != null ? searchType.name() : "ALL",
+                sortType != null ? sortType.name() : "LATEST",
+                size,
+                offset);
+
+        long totalResults = trainerRepository.countSearchResults(
+                keyword,
+                searchType != null ? searchType.name() : "ALL");
+
+        int totalPages = (int) Math.ceil((double) totalResults / size);
+
+        List<UUID> trainerIds = trainers.stream()
+                .map(Trainer::getTrainerId)
+                .collect(Collectors.toList());
+
+        Map<UUID, List<CertificationDTO>> certificationMap = getCertificationMapForTrainers(trainerIds);
+        Map<UUID, List<String>> specializationMap = getSpecializationMapForTrainers(trainerIds);
         Map<UUID, ReviewStatsDTO> reviewStatsMap = getReviewStatsMapForTrainers(trainerIds);
 
         List<TrainerDTO> trainerDTOs = trainers.stream()
@@ -80,13 +133,114 @@ public class TrainerServiceImpl implements TrainerService {
 
 
     @Override
+    @Transactional
+    public void updateTrainerProfile(UUID authenticatedUserId, UUID trainerId, TrainerProfileUpdateDTO updateDTO, List<MultipartFile> photos) {
+
+        List<String> uploadedFileUrls = new ArrayList<>();
+
+        try{
+            if (!authenticatedUserId.equals(trainerId)) {
+                throw new CustomException("자신의 프로필만 수정할 수 있습니다.", HttpStatus.FORBIDDEN); // 403 Forbidden
+            }
+            // N+1 문제를 해결하기 위해 trainer 한번에 로딩하는 메소드 필요
+            Trainer trainer = trainerRepository.findByIdWithProfileCollections(trainerId)
+                    .orElseThrow(() -> new CustomException("트레이너를 찾을 수 없습니다 ID: %s".formatted(trainerId), HttpStatus.NOT_FOUND));
+
+            trainer.setTitle(updateDTO.title());
+            trainer.setIntroduction(updateDTO.introduction());
+            trainer.setRepresentativeCareer(updateDTO.representativeCareer());
+            trainer.setSpecializationText(updateDTO.specializationText());
+            trainer.setVisitingAreas(updateDTO.visitingAreas());
+
+            updateTrainerServiceFees(trainer, updateDTO.serviceFees());
+            uploadedFileUrls = updateTrainerPhotos(trainer, photos);
+            // updateTrainerTags(trainer, updateDTO.tags()); // <-- 헬퍼 메소드 호출 예정
+
+            trainerRepository.save(trainer);
+        } catch (Exception e) {
+            if (!uploadedFileUrls.isEmpty()) { // 업로드 성공한 파일이 있다면
+                uploadedFileUrls.forEach(url -> {
+                    try {
+                        fileUploaderService.deleteFile(url);
+                    } catch (RuntimeException deleteException) {
+                        deleteException.printStackTrace();
+                    }
+                });
+            }
+            throw new CustomException("트레이너 프로필 업데이트 중 최종 오류 발생: " + e.getMessage(), e, HttpStatus.INTERNAL_SERVER_ERROR); // 원본 예외 포함
+        }
+
+    }
+
+    private void updateTrainerServiceFees(Trainer trainer, List<ServiceFeeUpdateDTO> serviceFeeDTOs) {
+        if (trainer.getServiceFees() != null) { // 컬렉션이 null일 경우 체크 (findByIdWithCollections가 잘 로딩하면 필요 없을 수 있음)
+            trainer.getServiceFees().clear();
+        } else {
+            trainer.setServiceFees(new HashSet<>());
+        }
+        // 2. updateDTO에 있는 ServiceFeeUpdateDTO 목록을 TrainerServiceFee 엔티티로 변환하여 Trainer 컬렉션에 추가
+        if (serviceFeeDTOs != null && !serviceFeeDTOs.isEmpty()) { // 비어있지 않은 목록일 경우에만 처리
+            for (ServiceFeeUpdateDTO feeDTO : serviceFeeDTOs) {
+                TrainerServiceFee newFee = new TrainerServiceFee();
+                newFee.setServiceType(feeDTO.serviceType());
+                newFee.setDurationMinutes(feeDTO.time());
+                newFee.setFeeAmount(feeDTO.price());
+
+                trainer.addServiceFee(newFee);
+            }
+        }
+    }
+
+     private List<String> updateTrainerPhotos(Trainer trainer, List<MultipartFile> photos) throws IOException {
+         if (photos == null || photos.size() != 2) {
+             throw new CustomException("프로필 사진은 정확히 2장을 첨부해야 합니다.", HttpStatus.BAD_REQUEST);
+         }
+         deleteExistingTrainerPhotos(trainer);
+
+         List<String> uploadedFileUrls = new ArrayList<>();
+
+         int photoOrder = 0; // 사진 순서 (0부터 시작)
+
+         for (MultipartFile photoFile : photos) {
+             if (photoFile.isEmpty()) {
+                 throw new CustomException("첨부된 사진 파일 중 비어있는 파일이 있습니다.", HttpStatus.BAD_REQUEST);
+             }
+             // 파일 업로드 (S3)
+             String folderName = "trainer-photos/" + trainer.getTrainerId() + "/"; // 트레이너 ID별 폴더
+             String fileUrl = fileUploaderService.uploadFile(photoFile, folderName);
+             uploadedFileUrls.add(fileUrl); // 업로드 성공한 URL 추적
+
+             TrainerPhoto newPhoto = new TrainerPhoto();
+             newPhoto.setFileUrl(fileUrl);
+             newPhoto.setPhotoOrder(photoOrder++);
+
+             trainer.addPhoto(newPhoto);
+         }
+         return uploadedFileUrls;
+     }
+
+    private void deleteExistingTrainerPhotos(Trainer trainer) {
+        Set<TrainerPhoto> existingPhotos = trainer.getPhotos();
+
+        if (existingPhotos != null && !existingPhotos.isEmpty()) {
+            existingPhotos.forEach(photo -> {
+                try {
+                    fileUploaderService.deleteFile(photo.getFileUrl());
+                } catch (RuntimeException e) {
+                    e.printStackTrace();
+                     throw new CustomException("기존 프로필 사진 S3 삭제 중 오류 발생: " ,e, HttpStatus.INTERNAL_SERVER_ERROR);
+                }
+            });
+            trainer.getPhotos().clear();
+        }
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public TrainerDTO getTrainerDetails(String trainerNickname) {
         // 1. Trainer 엔티티 조회 (ID는 UUID)
         Trainer trainer = trainerRepository.findByUser_Nickname(trainerNickname)
                 .orElseThrow(() -> new CustomException("훈련사 정보를 찾을 수 없습니다 ID: %s".formatted(trainerNickname), HttpStatus.NOT_FOUND));
-
-        PetUser user = trainer.getUser();
 
         Set<TrainerPhoto> photos = trainer.getPhotos();
         Set<TrainerServiceFee> serviceFees = trainer.getServiceFees();
@@ -100,29 +254,13 @@ public class TrainerServiceImpl implements TrainerService {
 
         ReviewStatsDTO reviewStatsDTO = getReviewStatsDTO(trainer.getTrainerId());
 
-
-        return new TrainerDTO(
-                trainer.getTrainerId(), // UUID 타입
-                user != null ? user.getName() : null,
-                user != null ? user.getNickname() : null,
-                user != null ? user.getProfileImageUrl() : null,
-                user != null ? user.getEmail() : null, // email 필드 추가 (PetUser에 있다고 가정)
-
-                trainer.getTitle(),
-                trainer.getIntroduction(),
-                trainer.getRepresentativeCareer(),
-                trainer.getSpecializationText(),
-                trainer.getVisitingAreas(),
-                trainer.getExperienceYears() != null ? trainer.getExperienceYears() : 0,
-
+        return convertToTrainerDTO(
+                trainer,
                 photoDTOs,
                 serviceFeeDTOs,
-
-                specializationNames, // 태그 이름 목록 (리스트 형태)
-                certificationDtoList, // 자격증 DTO 목록
-                reviewStatsDTO.averageRating(),
-                reviewStatsDTO.reviewCount()
-
+                specializationNames,
+                certificationDtoList,
+                reviewStatsDTO
         );
     }
 
@@ -187,7 +325,6 @@ public class TrainerServiceImpl implements TrainerService {
                 trainer.getRepresentativeCareer(),
                 trainer.getSpecializationText(),
                 trainer.getVisitingAreas(),
-                trainer.getExperienceYears() != null ? trainer.getExperienceYears() : 0,
                 photoDTOs,
                 serviceFeeDTOs,
                 specializationNames,
@@ -300,7 +437,7 @@ public class TrainerServiceImpl implements TrainerService {
             throw new CustomException("처리할 자격증 파일이 유효하지 않습니다.", HttpStatus.BAD_REQUEST);
         }
         try {
-            String folderName = "certifications/";
+            String folderName = "certifications/" + trainer.getTrainerId() + "/";
             fileUrl = fileUploaderService.uploadFile(certificationFile, folderName);
             Certification certification = new Certification();
             certification.setCertName(certificationDTO.certName());

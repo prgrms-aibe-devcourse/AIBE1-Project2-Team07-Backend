@@ -25,7 +25,7 @@ public class Trainer extends BaseTimeEntity {
     @JoinColumn(name = "trainer_id")
     private PetUser user;
 
-    private Integer experienceYears;
+//    private Integer experienceYears;
     private LocalDateTime approvedAt;
 
     private String title;
@@ -45,6 +45,9 @@ public class Trainer extends BaseTimeEntity {
 
     @OneToMany(mappedBy = "trainer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Set<TrainerServiceFee> serviceFees = new HashSet<>();
+
+    @OneToMany(mappedBy = "trainer", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<TrainerTagRelation> trainerTagRelations = new HashSet<>();
 
 
     public void addCertification(Certification certification) {
