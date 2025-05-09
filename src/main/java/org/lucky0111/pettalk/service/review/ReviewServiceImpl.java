@@ -189,7 +189,6 @@ public class ReviewServiceImpl implements ReviewService {
         Review review = new Review();
         review.setUserApply(userApply);
         review.setRating(requestDTO.rating());
-        review.setTitle(requestDTO.title());
         review.setComment(requestDTO.comment());
         review.setReviewImageUrl(requestDTO.reviewImageUrl());
         return review;
@@ -232,9 +231,6 @@ public class ReviewServiceImpl implements ReviewService {
     private void updateReviewFields(Review review, ReviewUpdateDTO updateDTO) {
         if (updateDTO.rating() != null) {
             review.setRating(updateDTO.rating());
-        }
-        if (updateDTO.title() != null) {
-            review.setTitle(updateDTO.title());
         }
         if (updateDTO.comment() != null) {
             review.setComment(updateDTO.comment());
@@ -370,7 +366,6 @@ public class ReviewServiceImpl implements ReviewService {
                 userApply.getTrainer().getUser().getNickname(),
                 userApply.getTrainer().getUser().getProfileImageUrl(),
                 review.getRating(),
-                review.getTitle(),
                 review.getComment(),
                 review.getReviewImageUrl(),
                 likeCount,
