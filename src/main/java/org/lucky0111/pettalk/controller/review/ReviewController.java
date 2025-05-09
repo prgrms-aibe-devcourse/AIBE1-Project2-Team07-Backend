@@ -12,7 +12,9 @@ import org.lucky0111.pettalk.service.review.ReviewService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @Slf4j
@@ -37,9 +39,12 @@ public class ReviewController {
             description = "새로운 리뷰를 작성합니다. 인증된 사용자만 접근 가능합니다."
     )
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<ReviewResponseDTO> createReview(@RequestBody ReviewRequestDTO requestDTO){
+    public ResponseEntity<ReviewResponseDTO> createReview(
+            @RequestPart ReviewRequestDTO requestDTO,
+            @RequestPart MultipartFile file
+            ) throws IOException {
         log.info("리뷰 작성 요청: {}", requestDTO);
-        ReviewResponseDTO responseDTO = reviewService.createReview(requestDTO);
+        ReviewResponseDTO responseDTO = reviewService.createReview(requestDTO, file);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
     }
 

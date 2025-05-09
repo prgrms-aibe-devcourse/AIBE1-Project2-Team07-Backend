@@ -6,8 +6,7 @@ import org.springframework.http.HttpStatus;
 public record ReviewRequestDTO(
         Long applyId,
         Integer rating,
-        String comment,
-        String reviewImageUrl
+        String comment
 ) {
         public ReviewRequestDTO {
                 if (rating == null || rating < 1 || rating > 5) {
