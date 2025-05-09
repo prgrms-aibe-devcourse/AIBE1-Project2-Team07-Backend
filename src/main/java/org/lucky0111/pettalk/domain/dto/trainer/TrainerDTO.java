@@ -18,7 +18,6 @@ public record TrainerDTO(
         String representativeCareer, // 대표 경력
         String specializationText, // 예: "행동 교정, 아질리티, 기본 복종"
         String visitingAreas, // 예: "강남구, 서초구, 송파구, 분당"
-        int experienceYears, // Trainer에서 가져옴
 
         List<TrainerPhotoDTO> photos,
         List<TrainerServiceFeeDTO> serviceFees,

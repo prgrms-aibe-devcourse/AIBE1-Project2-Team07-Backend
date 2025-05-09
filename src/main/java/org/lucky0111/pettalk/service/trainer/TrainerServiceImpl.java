@@ -95,37 +95,20 @@ public class TrainerServiceImpl implements TrainerService {
     @Override
     @Transactional(readOnly = true)
     public TrainerPageDTO searchTrainers(String keyword, TrainerSearchType searchType, int page, int size, TrainerSortType sortType) {
-        Pageable pageable = PageRequest.of(page, size);
+        int offset = page * size;
 
-        Specification<Trainer> spec = TrainerSpecification.withKeywordAndSort(keyword, searchType, TrainerSortType.LATEST);
-        Page<Trainer> trainersPage = trainerRepository.findAll(spec, pageable);
+        List<Trainer> trainers = trainerRepository.searchTrainersWithSort(
+                keyword,
+                searchType != null ? searchType.name() : "ALL",
+                sortType != null ? sortType.name() : "LATEST",
+                size,
+                offset);
 
-        List<Trainer> trainers = new ArrayList<>(trainersPage.getContent());
+        long totalResults = trainerRepository.countSearchResults(
+                keyword,
+                searchType != null ? searchType.name() : "ALL");
 
-        if (sortType != TrainerSortType.LATEST && !trainers.isEmpty()) {
-            List<UUID> trainerIds = trainers.stream()
-                    .map(Trainer::getTrainerId)
-                    .collect(Collectors.toList());
-
-            switch (sortType) {
-                case REVIEWS:
-                    Map<UUID, Long> reviewCountMap = getReviewCountMap(trainerIds);
-                    trainers.sort((t1, t2) -> {
-                        Long count1 = reviewCountMap.getOrDefault(t1.getTrainerId(), 0L);
-                        Long count2 = reviewCountMap.getOrDefault(t2.getTrainerId(), 0L);
-                        return Long.compare(count2, count1); // 내림차순
-                    });
-                    break;
-                case RATING:
-                    Map<UUID, Double> ratingMap = getRatingMap(trainerIds);
-                    trainers.sort((t1, t2) -> {
-                        Double rating1 = ratingMap.getOrDefault(t1.getTrainerId(), 0.0);
-                        Double rating2 = ratingMap.getOrDefault(t2.getTrainerId(), 0.0);
-                        return Double.compare(rating2, rating1); // 내림차순
-                    });
-                    break;
-            }
-        }
+        int totalPages = (int) Math.ceil((double) totalResults / size);
 
         List<UUID> trainerIds = trainers.stream()
                 .map(Trainer::getTrainerId)
@@ -146,7 +129,7 @@ public class TrainerServiceImpl implements TrainerService {
                 ))
                 .collect(Collectors.toList());
 
-        return new TrainerPageDTO(trainerDTOs, page, size, trainersPage.getTotalPages());
+        return new TrainerPageDTO(trainerDTOs, page, size, totalPages);
     }
 
 
@@ -189,51 +172,6 @@ public class TrainerServiceImpl implements TrainerService {
         }
 
     }
-
-    private Map<UUID, Long> getReviewCountMap(List<UUID> trainerIds) {
-        Map<UUID, Long> result = new HashMap<>();
-        try {
-            List<Object[]> counts = trainerRepository.countReviewsByTrainerIdsForSort(trainerIds);
-
-            for (Object[] row : counts) {
-                if (row != null && row.length >= 2 && row[0] != null && row[1] != null) {
-                    try {
-                        UUID trainerId = UUID.fromString(row[0].toString());
-                        Long count = row[1] instanceof Number ? ((Number) row[1]).longValue() : 0L;
-                        result.put(trainerId, count);
-                    } catch (IllegalArgumentException e) {
-                        log.error("UUID 변환 오류: {}", row[0]);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.error("리뷰 수 조회 중 오류 발생: {}", e.getMessage());
-        }
-        return result;
-    }
-
-    private Map<UUID, Double> getRatingMap(List<UUID> trainerIds) {
-        Map<UUID, Double> result = new HashMap<>();
-        try {
-            List<Object[]> ratings = trainerRepository.findAverageRatingsByTrainerIdsForSort(trainerIds);
-
-            for (Object[] row : ratings) {
-                if (row != null && row.length >= 2 && row[0] != null && row[1] != null) {
-                    try {
-                        UUID trainerId = UUID.fromString(row[0].toString());
-                        Double rating = row[1] instanceof Number ? ((Number) row[1]).doubleValue() : 0.0;
-                        result.put(trainerId, rating);
-                    } catch (IllegalArgumentException e) {
-                        log.error("UUID 변환 오류: {}", row[0]);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.error("평점 조회 중 오류 발생: {}", e.getMessage());
-        }
-        return result;
-    }
-
 
     private void updateTrainerServiceFees(Trainer trainer, List<ServiceFeeUpdateDTO> serviceFeeDTOs) {
         if (trainer.getServiceFees() != null) { // 컬렉션이 null일 경우 체크 (findByIdWithCollections가 잘 로딩하면 필요 없을 수 있음)
@@ -335,7 +273,6 @@ public class TrainerServiceImpl implements TrainerService {
                 trainer.getRepresentativeCareer(),
                 trainer.getSpecializationText(),
                 trainer.getVisitingAreas(),
-                trainer.getExperienceYears() != null ? trainer.getExperienceYears() : 0,
 
                 photoDTOs,
                 serviceFeeDTOs,
@@ -409,7 +346,6 @@ public class TrainerServiceImpl implements TrainerService {
                 trainer.getRepresentativeCareer(),
                 trainer.getSpecializationText(),
                 trainer.getVisitingAreas(),
-                trainer.getExperienceYears() != null ? trainer.getExperienceYears() : 0,
                 photoDTOs,
                 serviceFeeDTOs,
                 specializationNames,

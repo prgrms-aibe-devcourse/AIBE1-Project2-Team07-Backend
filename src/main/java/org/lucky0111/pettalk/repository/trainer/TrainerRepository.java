@@ -76,6 +76,52 @@ public interface TrainerRepository extends JpaRepository<Trainer, UUID> {
             nativeQuery = true)
     List<Object[]> findAverageRatingsByTrainerIdsForSort(@Param("trainerIds") List<UUID> trainerIds);
 
+    @Query(value = "SELECT DISTINCT t.* FROM trainers t " +
+            "JOIN pet_users u ON t.trainer_id = u.user_id " +
+            "LEFT JOIN (" +
+            "   SELECT ua.trainer_id, COUNT(r.review_id) as review_count " +
+            "   FROM reviews r " +
+            "   JOIN user_applies ua ON r.apply_id = ua.apply_id " +
+            "   GROUP BY ua.trainer_id" +
+            ") review_counts ON t.trainer_id = review_counts.trainer_id " +
+            "WHERE (:keyword IS NULL OR " +
+            "      (:searchType = 'ALL' AND (LOWER(t.title) LIKE CONCAT('%', LOWER(:keyword), '%') OR " +
+            "                               LOWER(t.introduction) LIKE CONCAT('%', LOWER(:keyword), '%') OR " +
+            "                               LOWER(t.visiting_areas) LIKE CONCAT('%', LOWER(:keyword), '%'))) OR " +
+            "      (:searchType = 'TITLE' AND LOWER(t.title) LIKE CONCAT('%', LOWER(:keyword), '%')) OR " +
+            "      (:searchType = 'CONTENT' AND LOWER(t.introduction) LIKE CONCAT('%', LOWER(:keyword), '%')) OR " +
+            "      (:searchType = 'LOCATION' AND LOWER(t.visiting_areas) LIKE CONCAT('%', LOWER(:keyword), '%'))) " +
+            "ORDER BY " +
+            "CASE WHEN :sortType = 'REVIEWS' THEN COALESCE(review_counts.review_count, 0) END DESC, " +
+            "CASE WHEN :sortType = 'RATING' THEN " +
+            "  (SELECT COALESCE(AVG(r.rating), 0) FROM reviews r " +
+            "   JOIN user_applies ua ON r.apply_id = ua.apply_id " +
+            "   WHERE ua.trainer_id = t.trainer_id) " +
+            "END DESC, " +
+            "CASE WHEN :sortType = 'LATEST' OR :sortType NOT IN ('REVIEWS', 'RATING') THEN t.created_at END DESC " +
+            "LIMIT :pageSize OFFSET :offset",
+            nativeQuery = true)
+    List<Trainer> searchTrainersWithSort(
+            @Param("keyword") String keyword,
+            @Param("searchType") String searchType,
+            @Param("sortType") String sortType,
+            @Param("pageSize") int pageSize,
+            @Param("offset") int offset);
+
+    @Query(value = "SELECT COUNT(DISTINCT t.trainer_id) FROM trainers t " +
+            "JOIN pet_users u ON t.trainer_id = u.user_id " +
+            "WHERE (:keyword IS NULL OR " +
+            "      (:searchType = 'ALL' AND (LOWER(t.title) LIKE CONCAT('%', LOWER(:keyword), '%') OR " +
+            "                               LOWER(t.introduction) LIKE CONCAT('%', LOWER(:keyword), '%') OR " +
+            "                               LOWER(t.visiting_areas) LIKE CONCAT('%', LOWER(:keyword), '%'))) OR " +
+            "      (:searchType = 'TITLE' AND LOWER(t.title) LIKE CONCAT('%', LOWER(:keyword), '%')) OR " +
+            "      (:searchType = 'CONTENT' AND LOWER(t.introduction) LIKE CONCAT('%', LOWER(:keyword), '%')) OR " +
+            "      (:searchType = 'LOCATION' AND LOWER(t.visiting_areas) LIKE CONCAT('%', LOWER(:keyword), '%')))",
+            nativeQuery = true)
+    long countSearchResults(
+            @Param("keyword") String keyword,
+            @Param("searchType") String searchType);
+
     @Query("SELECT COUNT(t) FROM Trainer t")
     long countTrainers();
 }
