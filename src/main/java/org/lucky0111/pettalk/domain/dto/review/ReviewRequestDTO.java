@@ -6,7 +6,6 @@ import org.springframework.http.HttpStatus;
 public record ReviewRequestDTO(
         Long applyId,
         Integer rating,
-        String title,
         String comment,
         String reviewImageUrl
 ) {

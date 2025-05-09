@@ -32,7 +32,5 @@ public class Review extends BaseTimeEntity {
     private String reviewImageUrl;
 
     @Column(nullable = false)
-    private String title;
-    @Column(nullable = false)
     private String comment;
 }
