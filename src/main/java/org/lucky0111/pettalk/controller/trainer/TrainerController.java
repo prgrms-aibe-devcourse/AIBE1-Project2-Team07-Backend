@@ -3,6 +3,8 @@ package org.lucky0111.pettalk.controller.trainer;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.lucky0111.pettalk.domain.common.TrainerSearchType;
+import org.lucky0111.pettalk.domain.common.TrainerSortType;
 import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
 import org.lucky0111.pettalk.domain.dto.trainer.CertificationRequestDTO;
 import org.lucky0111.pettalk.domain.dto.trainer.TrainerDTO;
@@ -31,10 +33,23 @@ public class TrainerController {
     @GetMapping
     @Operation(summary = "트레이너 목록 조회", description = "트레이너 목록을 페이지 단위로 조회합니다.")
     public ResponseEntity<TrainerPageDTO> getAllTrainers(
-            @RequestParam(defaultValue = "0") int page
-    ) {
-        TrainerPageDTO posts = trainerService.getAllTrainers(page, PAGE_SIZE);
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "LATEST")TrainerSortType sortType
+            ) {
+        TrainerPageDTO posts = trainerService.getAllTrainers(page, PAGE_SIZE, sortType);
         return ResponseEntity.ok(posts);
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "트레이너 검색", description = "키워드로 트레이너를 검색합니다.")
+    public ResponseEntity<TrainerPageDTO> searchTrainers(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "ALL") TrainerSearchType searchType,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "LATEST") TrainerSortType sortType) {
+
+        TrainerPageDTO results = trainerService.searchTrainers(keyword, searchType, page, PAGE_SIZE, sortType);
+        return ResponseEntity.ok(results);
     }
 
     @GetMapping("/{trainerNickname}") // 조회만 Nickname을 이용해서.

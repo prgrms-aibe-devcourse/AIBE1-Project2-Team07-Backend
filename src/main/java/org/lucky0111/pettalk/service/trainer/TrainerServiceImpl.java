@@ -2,6 +2,9 @@ package org.lucky0111.pettalk.service.trainer;
 
 import com.sun.jdi.request.DuplicateRequestException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.lucky0111.pettalk.domain.common.TrainerSearchType;
+import org.lucky0111.pettalk.domain.common.TrainerSortType;
 import org.lucky0111.pettalk.domain.common.UserRole;
 import org.lucky0111.pettalk.domain.dto.review.ReviewStatsDTO;
 import org.lucky0111.pettalk.domain.dto.trainer.*;
@@ -46,10 +49,22 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     @Transactional(readOnly = true)
-    public TrainerPageDTO getAllTrainers(int page, int size) {
+    public TrainerPageDTO getAllTrainers(int page, int size, TrainerSortType sortType) {
         Pageable pageable = PageRequest.of(page, size);
 
-        List<Trainer> trainers = trainerRepository.findAllWithPhotosAndServiceFees(pageable);
+        List<Trainer> trainers;
+        switch (sortType) {
+            case REVIEWS:
+                trainers = trainerRepository.findAllWithPhotosAndServiceFeesByReviewCount(pageable);
+                break;
+            case RATING:
+                trainers = trainerRepository.findAllWithPhotosAndServiceFeesByRating(pageable);
+                break;
+            case LATEST:
+            default:
+                trainers = trainerRepository.findAllWithPhotosAndServiceFeesByLatest(pageable);
+                break;
+        }
 
         long totalTrainers = trainerRepository.countTrainers();
         int totalPages = (int) Math.ceil((double) totalTrainers / size);
@@ -59,9 +74,7 @@ public class TrainerServiceImpl implements TrainerService {
                 .collect(Collectors.toList());
 
         Map<UUID, List<CertificationDTO>> certificationMap = getCertificationMapForTrainers(trainerIds);
-
         Map<UUID, List<String>> specializationMap = getSpecializationMapForTrainers(trainerIds);
-
         Map<UUID, ReviewStatsDTO> reviewStatsMap = getReviewStatsMapForTrainers(trainerIds);
 
         List<TrainerDTO> trainerDTOs = trainers.stream()
@@ -77,6 +90,47 @@ public class TrainerServiceImpl implements TrainerService {
 
         return new TrainerPageDTO(trainerDTOs, page, size, totalPages);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TrainerPageDTO searchTrainers(String keyword, TrainerSearchType searchType, int page, int size, TrainerSortType sortType) {
+        int offset = page * size;
+
+        List<Trainer> trainers = trainerRepository.searchTrainersWithSort(
+                keyword,
+                searchType != null ? searchType.name() : "ALL",
+                sortType != null ? sortType.name() : "LATEST",
+                size,
+                offset);
+
+        long totalResults = trainerRepository.countSearchResults(
+                keyword,
+                searchType != null ? searchType.name() : "ALL");
+
+        int totalPages = (int) Math.ceil((double) totalResults / size);
+
+        List<UUID> trainerIds = trainers.stream()
+                .map(Trainer::getTrainerId)
+                .collect(Collectors.toList());
+
+        Map<UUID, List<CertificationDTO>> certificationMap = getCertificationMapForTrainers(trainerIds);
+        Map<UUID, List<String>> specializationMap = getSpecializationMapForTrainers(trainerIds);
+        Map<UUID, ReviewStatsDTO> reviewStatsMap = getReviewStatsMapForTrainers(trainerIds);
+
+        List<TrainerDTO> trainerDTOs = trainers.stream()
+                .map(trainer -> convertToTrainerDTO(
+                        trainer,
+                        getPhotosDTO(trainer.getPhotos()),
+                        getServiceFeesDTO(trainer.getServiceFees()),
+                        specializationMap.getOrDefault(trainer.getTrainerId(), Collections.emptyList()),
+                        certificationMap.getOrDefault(trainer.getTrainerId(), Collections.emptyList()),
+                        reviewStatsMap.getOrDefault(trainer.getTrainerId(), new ReviewStatsDTO(0.0, 0L))
+                ))
+                .collect(Collectors.toList());
+
+        return new TrainerPageDTO(trainerDTOs, page, size, totalPages);
+    }
+
 
     @Override
     @Transactional
