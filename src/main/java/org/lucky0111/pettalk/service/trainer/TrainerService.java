@@ -1,6 +1,7 @@
 package org.lucky0111.pettalk.service.trainer;
 
 import jakarta.validation.Valid;
+import org.lucky0111.pettalk.domain.common.TrainerSortType;
 import org.lucky0111.pettalk.domain.dto.trainer.CertificationRequestDTO;
 import org.lucky0111.pettalk.domain.dto.trainer.TrainerDTO;
 import org.lucky0111.pettalk.domain.dto.trainer.TrainerPageDTO;
@@ -20,7 +21,7 @@ public interface TrainerService {
 
     void addCertification(UUID trainerId, CertificationRequestDTO certificationDTO, MultipartFile certificationFile);
 
-    TrainerPageDTO getAllTrainers(int page, int size);
+    TrainerPageDTO getAllTrainers(int page, int size, TrainerSortType sortType);
 
     void updateTrainerProfile(UUID authenticatedUserId, UUID trainerId, TrainerProfileUpdateDTO updateDTO, List<MultipartFile> photos);
 }
