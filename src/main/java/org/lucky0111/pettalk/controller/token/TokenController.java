@@ -22,6 +22,7 @@ public class TokenController {
     @PostMapping("/reissue")
     public ResponseEntity<?> reissue(@RequestBody TokenDTO tokens, HttpServletRequest request) throws BadRequestException, CredentialExpiredException {
 
+
         return ResponseEntity.ok(null);
     }
 
