@@ -17,6 +17,7 @@ import org.lucky0111.pettalk.repository.review.ReviewLikeRepository;
 import org.lucky0111.pettalk.repository.review.ReviewRepository;
 import org.lucky0111.pettalk.repository.trainer.TrainerRepository;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
+import org.lucky0111.pettalk.service.file.FileUploaderService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -25,7 +26,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -42,12 +45,15 @@ public class ReviewServiceImpl implements ReviewService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private final TrainerRepository trainerRepository;
+    private final FileUploaderService fileUploaderService;
 
     @Override
     @Transactional
-    public ReviewResponseDTO createReview(ReviewRequestDTO requestDTO) {
+    public ReviewResponseDTO createReview(ReviewRequestDTO requestDTO, MultipartFile reviewImageFile) throws IOException {
         PetUser currentUser = getCurrentUser();
         UserApply userApply = findUserApplyById(requestDTO.applyId());
+
+
 
         validateUserPermission(userApply, currentUser.getUserId());
         validateApplyStatus(userApply);
@@ -57,6 +63,12 @@ public class ReviewServiceImpl implements ReviewService {
         userApplyRepository.save(userApply);
 
         Review review = buildReviewFromRequest(requestDTO, userApply);
+
+        String folderName = "review/";
+
+        String imgUrl = fileUploaderService.uploadFile(reviewImageFile, folderName);
+        review.setReviewImageUrl(imgUrl);
+
         Review savedReview = reviewRepository.save(review);
 
         return convertToResponseDTO(savedReview, currentUser.getUserId());
@@ -190,7 +202,6 @@ public class ReviewServiceImpl implements ReviewService {
         review.setUserApply(userApply);
         review.setRating(requestDTO.rating());
         review.setComment(requestDTO.comment());
-        review.setReviewImageUrl(requestDTO.reviewImageUrl());
         return review;
     }
 
