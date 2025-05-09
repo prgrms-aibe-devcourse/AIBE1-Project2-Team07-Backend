@@ -18,6 +18,7 @@ import org.lucky0111.pettalk.exception.CustomException;
 import org.lucky0111.pettalk.repository.common.TagRepository;
 import org.lucky0111.pettalk.repository.community.*;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
+import org.lucky0111.pettalk.service.file.FileUploaderService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,7 +29,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -45,26 +48,28 @@ public class PostServiceImpl implements PostService {
     private final TagRepository tagRepository;
     private final PostTagRepository postTagRepository;
     private final PostImageRepository postImageRepository;
+    private final FileUploaderService fileUploaderService;
 
     private static final int PAGE_SIZE = 10;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Override
     @Transactional
-    public PostResponseDTO createPost(PostRequestDTO requestDTO) {
+    public PostResponseDTO createPost(PostRequestDTO requestDTO, MultipartFile[] files) throws IOException {
         PetUser currentUser = getCurrentUser();
 
         Post post = buildPostFromRequest(requestDTO, currentUser);
-        Post savedPost = postRepository.save(post);
 
-        if (requestDTO.imageUrls() != null) {
-            for (int i = 0; i < requestDTO.imageUrls().size(); i++) {
-                PostImage postImage = new PostImage();
-                postImage.setImageUrl(requestDTO.imageUrls().get(i));
-                postImage.setPost(savedPost);
-                postImageRepository.save(postImage);
-            }
+        String folderName = "post/";
+        for (MultipartFile file : files) {
+            String imgUrl = fileUploaderService.uploadFile(file, folderName);
+
+            PostImage postImage = new PostImage();
+            postImage.setPost(post);
+            postImage.setImageUrl(imgUrl);
+            postImageRepository.save(postImage);
         }
+        Post savedPost = postRepository.save(post);
 
         savePostTags(savedPost, requestDTO.tagIds());
 
@@ -74,7 +79,7 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public PostPageDTO getAllPosts(int page, PostCategory postCategory, PetCategory petCategory, SortType sortType) {
-        UUID currentUserUUID = getCurrentUserUUID();
+        UUID currentUserUUID = null;
 
         Pageable pageable = PageRequest.of(page, PAGE_SIZE);
 

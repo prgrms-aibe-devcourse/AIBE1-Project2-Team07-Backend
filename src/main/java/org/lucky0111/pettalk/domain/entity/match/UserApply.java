@@ -15,8 +15,8 @@ import org.lucky0111.pettalk.domain.entity.trainer.Trainer;
 @Table(name = "user_applies", indexes = {
         @Index(name = "idx_user_apply_user", columnList = "user_id"),
         @Index(name = "idx_user_apply_trainer", columnList = "trainer_id"),
-        @Index(name = "idx_user_apply_status", columnList = "status"),
-        @Index(name = "idx_user_trainer_status", columnList = "user_id, trainer_id, status")
+        @Index(name = "idx_user_apply_status", columnList = "applyStatus"),
+        @Index(name = "idx_user_trainer_status", columnList = "user_id, trainer_id, applyStatus")
 })
 public class UserApply extends BaseTimeEntity {
     @Id

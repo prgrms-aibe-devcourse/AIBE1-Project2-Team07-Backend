@@ -15,7 +15,9 @@ import org.lucky0111.pettalk.service.community.PostService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @Slf4j
@@ -99,10 +101,12 @@ public class PostController {
     @PostMapping
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<PostResponseDTO> createPost(
-            @RequestBody PostRequestDTO requestDTO) {
+            @RequestPart PostRequestDTO requestDTO,
+            @RequestPart MultipartFile[] files
+    ) throws IOException {
         log.info("게시물 작성 요청: {}", requestDTO);
 
-        PostResponseDTO createdPost = postService.createPost(requestDTO);
+        PostResponseDTO createdPost = postService.createPost(requestDTO, files);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdPost);
     }
 

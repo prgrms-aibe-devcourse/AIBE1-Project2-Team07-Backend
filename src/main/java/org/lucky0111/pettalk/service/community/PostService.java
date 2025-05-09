@@ -4,11 +4,13 @@ import org.lucky0111.pettalk.domain.common.PetCategory;
 import org.lucky0111.pettalk.domain.common.PostCategory;
 import org.lucky0111.pettalk.domain.common.SortType;
 import org.lucky0111.pettalk.domain.dto.community.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 public interface PostService {
-    PostResponseDTO createPost(PostRequestDTO requestDTO);
+    PostResponseDTO createPost(PostRequestDTO requestDTO, MultipartFile[] files) throws IOException;
     PostPageDTO getAllPosts(int page, PostCategory postCategory, PetCategory petCategory, SortType sortType);
     PostPageDTO searchPosts(String keyword, int page, PostCategory postCategory, PetCategory petCategory, SortType sortType);
     List<PostResponseDTO> getMyPosts();
