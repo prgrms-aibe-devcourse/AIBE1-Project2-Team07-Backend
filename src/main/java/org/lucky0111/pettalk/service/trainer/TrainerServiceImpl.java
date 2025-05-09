@@ -2,6 +2,7 @@ package org.lucky0111.pettalk.service.trainer;
 
 import com.sun.jdi.request.DuplicateRequestException;
 import lombok.RequiredArgsConstructor;
+import org.lucky0111.pettalk.domain.common.TrainerSearchType;
 import org.lucky0111.pettalk.domain.common.TrainerSortType;
 import org.lucky0111.pettalk.domain.common.UserRole;
 import org.lucky0111.pettalk.domain.dto.review.ReviewStatsDTO;
@@ -18,6 +19,7 @@ import org.lucky0111.pettalk.service.file.FileUploaderService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -90,6 +92,64 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public TrainerPageDTO searchTrainers(String keyword, TrainerSearchType searchType, int page, int size, TrainerSortType sortType) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        Specification<Trainer> spec = TrainerSpecification.withKeywordAndSort(keyword, searchType, TrainerSortType.LATEST);
+        Page<Trainer> trainersPage = trainerRepository.findAll(spec, pageable);
+
+        List<Trainer> trainers = trainersPage.getContent();
+
+        if (sortType != TrainerSortType.LATEST && !trainers.isEmpty()) {
+            List<UUID> trainerIds = trainers.stream()
+                    .map(Trainer::getTrainerId)
+                    .collect(Collectors.toList());
+
+            switch (sortType) {
+                case REVIEWS:
+                    Map<UUID, Long> reviewCountMap = getReviewCountMap(trainerIds);
+                    trainers.sort((t1, t2) -> {
+                        Long count1 = reviewCountMap.getOrDefault(t1.getTrainerId(), 0L);
+                        Long count2 = reviewCountMap.getOrDefault(t2.getTrainerId(), 0L);
+                        return count2.compareTo(count1); // 내림차순
+                    });
+                    break;
+                case RATING:
+                    Map<UUID, Double> ratingMap = getRatingMap(trainerIds);
+                    trainers.sort((t1, t2) -> {
+                        Double rating1 = ratingMap.getOrDefault(t1.getTrainerId(), 0.0);
+                        Double rating2 = ratingMap.getOrDefault(t2.getTrainerId(), 0.0);
+                        return rating2.compareTo(rating1); // 내림차순
+                    });
+                    break;
+            }
+        }
+
+        List<UUID> trainerIds = trainers.stream()
+                .map(Trainer::getTrainerId)
+                .collect(Collectors.toList());
+
+        Map<UUID, List<CertificationDTO>> certificationMap = getCertificationMapForTrainers(trainerIds);
+        Map<UUID, List<String>> specializationMap = getSpecializationMapForTrainers(trainerIds);
+        Map<UUID, ReviewStatsDTO> reviewStatsMap = getReviewStatsMapForTrainers(trainerIds);
+
+        List<TrainerDTO> trainerDTOs = trainers.stream()
+                .map(trainer -> convertToTrainerDTO(
+                        trainer,
+                        getPhotosDTO(trainer.getPhotos()),
+                        getServiceFeesDTO(trainer.getServiceFees()),
+                        specializationMap.getOrDefault(trainer.getTrainerId(), Collections.emptyList()),
+                        certificationMap.getOrDefault(trainer.getTrainerId(), Collections.emptyList()),
+                        reviewStatsMap.getOrDefault(trainer.getTrainerId(), new ReviewStatsDTO(0.0, 0L))
+                ))
+                .collect(Collectors.toList());
+
+        return new TrainerPageDTO(trainerDTOs, page, size, trainersPage.getTotalPages());
+    }
+
+
+    @Override
     @Transactional
     public void updateTrainerProfile(UUID authenticatedUserId, UUID trainerId, TrainerProfileUpdateDTO updateDTO, List<MultipartFile> photos) {
 
@@ -128,6 +188,33 @@ public class TrainerServiceImpl implements TrainerService {
         }
 
     }
+
+    private Map<UUID, Long> getReviewCountMap(List<UUID> trainerIds) {
+        Map<UUID, Long> result = new HashMap<>();
+        List<Object[]> counts = trainerRepository.countReviewsByTrainerIdsForSort(trainerIds);
+
+        for (Object[] row : counts) {
+            UUID trainerId = UUID.fromString(row[0].toString());
+            Long count = ((Number) row[1]).longValue();
+            result.put(trainerId, count);
+        }
+
+        return result;
+    }
+
+    private Map<UUID, Double> getRatingMap(List<UUID> trainerIds) {
+        Map<UUID, Double> result = new HashMap<>();
+        List<Object[]> ratings = trainerRepository.findAverageRatingsByTrainerIdsForSort(trainerIds);
+
+        for (Object[] row : ratings) {
+            UUID trainerId = UUID.fromString(row[0].toString());
+            Double rating = ((Number) row[1]).doubleValue();
+            result.put(trainerId, rating);
+        }
+
+        return result;
+    }
+
 
     private void updateTrainerServiceFees(Trainer trainer, List<ServiceFeeUpdateDTO> serviceFeeDTOs) {
         if (trainer.getServiceFees() != null) { // 컬렉션이 null일 경우 체크 (findByIdWithCollections가 잘 로딩하면 필요 없을 수 있음)
