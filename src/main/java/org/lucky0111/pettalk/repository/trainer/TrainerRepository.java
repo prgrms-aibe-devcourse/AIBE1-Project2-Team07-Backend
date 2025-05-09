@@ -2,8 +2,10 @@ package org.lucky0111.pettalk.repository.trainer;
 
 import org.lucky0111.pettalk.domain.entity.trainer.Trainer;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +19,14 @@ public interface TrainerRepository extends JpaRepository<Trainer, UUID> {
             "LEFT JOIN FETCH t.photos " +
             "LEFT JOIN FETCH t.serviceFees")
     List<Trainer> findAllWithPhotosAndServiceFees(Pageable pageable);
+
+    @Query("SELECT DISTINCT t FROM Trainer t " +
+            "JOIN FETCH t.user u " +
+            "LEFT JOIN FETCH t.photos p " +
+            "LEFT JOIN FETCH t.serviceFees sf " +
+            "LEFT JOIN FETCH t.trainerTagRelations ttr " +
+            "WHERE t.trainerId = :trainerId")
+    Optional<Trainer> findByIdWithProfileCollections(@Param("trainerId") UUID trainerId);
 
     @Query("SELECT COUNT(t) FROM Trainer t")
     long countTrainers();
