@@ -97,7 +97,7 @@ public class TrainerServiceImpl implements TrainerService {
 
         updateTrainerServiceFees(trainer, updateDTO.serviceFees());
         updateTrainerPhotos(trainer, photos);
-        // updateTrainerSpecializations(trainer, updateDTO.specializations()); // <-- 헬퍼 메소드 호출 예정
+        // updateTrainerTags(trainer, updateDTO.tags()); // <-- 헬퍼 메소드 호출 예정
 
         trainerRepository.save(trainer);
 

@@ -17,7 +17,7 @@ public record TrainerProfileUpdateDTO(
 
         // 전문 분야 (Tag 이름 목록)
         // 추후 MCP 활용하여 프로필 수정 내용을 기반으로 Tag 선정하여 넣어달라고 할 예정.
-        List<String> specializations, // 또는 Set<String>으로 변경 가능 (중복 이름 방지 시)
+        List<String> tags, // 또는 Set<String>으로 변경 가능 (중복 이름 방지 시)
 
 
         @NotBlank String introduction
