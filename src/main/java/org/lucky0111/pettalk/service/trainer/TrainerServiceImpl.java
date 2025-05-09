@@ -82,24 +82,39 @@ public class TrainerServiceImpl implements TrainerService {
     @Transactional
     public void updateTrainerProfile(UUID authenticatedUserId, UUID trainerId, TrainerProfileUpdateDTO updateDTO, List<MultipartFile> photos) {
 
-        if (!authenticatedUserId.equals(trainerId)) {
-            throw new CustomException("자신의 프로필만 수정할 수 있습니다.", HttpStatus.FORBIDDEN); // 403 Forbidden
+        List<String> uploadedFileUrls = new ArrayList<>();
+
+        try{
+            if (!authenticatedUserId.equals(trainerId)) {
+                throw new CustomException("자신의 프로필만 수정할 수 있습니다.", HttpStatus.FORBIDDEN); // 403 Forbidden
+            }
+            // N+1 문제를 해결하기 위해 trainer 한번에 로딩하는 메소드 필요
+            Trainer trainer = trainerRepository.findByIdWithProfileCollections(trainerId)
+                    .orElseThrow(() -> new CustomException("트레이너를 찾을 수 없습니다 ID: %s".formatted(trainerId), HttpStatus.NOT_FOUND));
+
+            trainer.setTitle(updateDTO.title());
+            trainer.setIntroduction(updateDTO.introduction());
+            trainer.setRepresentativeCareer(updateDTO.representativeCareer());
+            trainer.setSpecializationText(updateDTO.specializationText());
+            trainer.setVisitingAreas(updateDTO.visitingAreas());
+
+            updateTrainerServiceFees(trainer, updateDTO.serviceFees());
+            uploadedFileUrls = updateTrainerPhotos(trainer, photos);
+            // updateTrainerTags(trainer, updateDTO.tags()); // <-- 헬퍼 메소드 호출 예정
+
+            trainerRepository.save(trainer);
+        } catch (Exception e) {
+            if (!uploadedFileUrls.isEmpty()) { // 업로드 성공한 파일이 있다면
+                uploadedFileUrls.forEach(url -> {
+                    try {
+                        fileUploaderService.deleteFile(url);
+                    } catch (RuntimeException deleteException) {
+                        deleteException.printStackTrace();
+                    }
+                });
+            }
+            throw new CustomException("트레이너 프로필 업데이트 중 최종 오류 발생: " + e.getMessage(), e, HttpStatus.INTERNAL_SERVER_ERROR); // 원본 예외 포함
         }
-        // N+1 문제를 해결하기 위해 trainer 한번에 로딩하는 메소드 필요
-        Trainer trainer = trainerRepository.findByIdWithProfileCollections(trainerId)
-                .orElseThrow(() -> new CustomException("트레이너를 찾을 수 없습니다 ID: %s".formatted(trainerId), HttpStatus.NOT_FOUND));
-
-        trainer.setTitle(updateDTO.title());
-        trainer.setIntroduction(updateDTO.introduction());
-        trainer.setRepresentativeCareer(updateDTO.representativeCareer());
-        trainer.setSpecializationText(updateDTO.specializationText());
-        trainer.setVisitingAreas(updateDTO.visitingAreas());
-
-        updateTrainerServiceFees(trainer, updateDTO.serviceFees());
-        updateTrainerPhotos(trainer, photos);
-        // updateTrainerTags(trainer, updateDTO.tags()); // <-- 헬퍼 메소드 호출 예정
-
-        trainerRepository.save(trainer);
 
     }
 
@@ -109,7 +124,6 @@ public class TrainerServiceImpl implements TrainerService {
         } else {
             trainer.setServiceFees(new HashSet<>());
         }
-
         // 2. updateDTO에 있는 ServiceFeeUpdateDTO 목록을 TrainerServiceFee 엔티티로 변환하여 Trainer 컬렉션에 추가
         if (serviceFeeDTOs != null && !serviceFeeDTOs.isEmpty()) { // 비어있지 않은 목록일 경우에만 처리
             for (ServiceFeeUpdateDTO feeDTO : serviceFeeDTOs) {
@@ -123,43 +137,32 @@ public class TrainerServiceImpl implements TrainerService {
         }
     }
 
-     private void updateTrainerPhotos(Trainer trainer, List<MultipartFile> photos) {
+     private List<String> updateTrainerPhotos(Trainer trainer, List<MultipartFile> photos) throws IOException {
          if (photos == null || photos.size() != 2) {
              throw new CustomException("프로필 사진은 정확히 2장을 첨부해야 합니다.", HttpStatus.BAD_REQUEST);
          }
+         deleteExistingTrainerPhotos(trainer);
+
          List<String> uploadedFileUrls = new ArrayList<>();
 
-         try {
-             deleteExistingTrainerPhotos(trainer);
+         int photoOrder = 0; // 사진 순서 (0부터 시작)
 
-             int photoOrder = 0; // 사진 순서 (0부터 시작)
-             for (MultipartFile photoFile : photos) {
-                 if (photoFile.isEmpty()) {
-                     throw new CustomException("첨부된 사진 파일 중 비어있는 파일이 있습니다.", HttpStatus.BAD_REQUEST);
-                 }
-                 // 파일 업로드 (S3)
-                 String folderName = "trainer-photos/" + trainer.getTrainerId() + "/"; // 트레이너 ID별 폴더
-                 String fileUrl = fileUploaderService.uploadFile(photoFile, folderName);
-                 uploadedFileUrls.add(fileUrl); // 업로드 성공한 URL 추적
-
-                 TrainerPhoto newPhoto = new TrainerPhoto();
-                 newPhoto.setFileUrl(fileUrl);
-                 newPhoto.setPhotoOrder(photoOrder++);
-
-                 trainer.addPhoto(newPhoto);
+         for (MultipartFile photoFile : photos) {
+             if (photoFile.isEmpty()) {
+                 throw new CustomException("첨부된 사진 파일 중 비어있는 파일이 있습니다.", HttpStatus.BAD_REQUEST);
              }
-         } catch (Exception e) {
-             if (!uploadedFileUrls.isEmpty()) {
-                 uploadedFileUrls.forEach(url -> {
-                     try {
-                         fileUploaderService.deleteFile(url);
-                     } catch (RuntimeException deleteException) {
-                         deleteException.printStackTrace(); // 로깅 프레임워크 사용 권장
-                     }
-                 });
-             }
-             throw new CustomException("프로필 사진 업데이트 중 오류 발생: " + e.getMessage(), e, HttpStatus.INTERNAL_SERVER_ERROR); // 원본 예외 포함
+             // 파일 업로드 (S3)
+             String folderName = "trainer-photos/" + trainer.getTrainerId() + "/"; // 트레이너 ID별 폴더
+             String fileUrl = fileUploaderService.uploadFile(photoFile, folderName);
+             uploadedFileUrls.add(fileUrl); // 업로드 성공한 URL 추적
+
+             TrainerPhoto newPhoto = new TrainerPhoto();
+             newPhoto.setFileUrl(fileUrl);
+             newPhoto.setPhotoOrder(photoOrder++);
+
+             trainer.addPhoto(newPhoto);
          }
+         return uploadedFileUrls;
      }
 
     private void deleteExistingTrainerPhotos(Trainer trainer) {

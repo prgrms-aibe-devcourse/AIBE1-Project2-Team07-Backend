@@ -70,6 +70,7 @@ public class TrainerController {
     }
 
     @PutMapping("/{trainerId}")
+    @Operation(summary = "트레이너 프로필 수정", description = "모든 항목 기입해야하며 사진은 필수2장, 이미 DB에 사진이 들어가있어도 삭제후 재 등록하는 형태 ")
     public ResponseEntity<Void> updateTrainerProfile(
             @AuthenticationPrincipal CustomOAuth2User principal, // principal은 CustomOAuth2User 타입
             @PathVariable UUID trainerId,
