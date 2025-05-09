@@ -1,5 +1,8 @@
 package org.lucky0111.pettalk.repository.trainer;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Root;
 import org.lucky0111.pettalk.domain.common.TrainerSearchType;
 import org.lucky0111.pettalk.domain.common.TrainerSortType;
 import org.lucky0111.pettalk.domain.entity.trainer.Trainer;
@@ -38,10 +41,7 @@ public class TrainerSpecification {
                 return criteriaBuilder.conjunction();
             }
 
-            if (sortType == TrainerSortType.LATEST) {
-                query.orderBy(criteriaBuilder.desc(root.get("createdAt")));
-            }
-
+            applySortOrder(root, query, criteriaBuilder, sortType);
             return criteriaBuilder.conjunction();
         };
     }
@@ -51,5 +51,28 @@ public class TrainerSpecification {
         return Specification
                 .where(searchByKeyword(keyword, searchType))
                 .and(withSortType(sortType));
+    }
+
+    private static void applySortOrder(
+            Root<Trainer> root,
+            CriteriaQuery<?> query,
+            CriteriaBuilder criteriaBuilder,
+            TrainerSortType sortType) {
+
+        if (sortType == null) {
+            sortType = TrainerSortType.LATEST;
+        }
+
+        switch (sortType) {
+            case LATEST:
+                query.orderBy(criteriaBuilder.desc(root.get("createdAt")));
+                break;
+
+            case REVIEWS:
+            case RATING:
+            default:
+                query.orderBy(criteriaBuilder.desc(root.get("createdAt")));
+                break;
+        }
     }
 }

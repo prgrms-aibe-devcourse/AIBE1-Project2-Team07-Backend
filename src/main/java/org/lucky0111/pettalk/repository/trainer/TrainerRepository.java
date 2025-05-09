@@ -67,7 +67,7 @@ public interface TrainerRepository extends JpaRepository<Trainer, UUID> {
             nativeQuery = true)
     List<Object[]> countReviewsByTrainerIdsForSort(@Param("trainerIds") List<UUID> trainerIds);
 
-    @Query(value = "SELECT t.trainer_id, COALESCE(AVG(r.rating), 0) as avg_rating " +
+    @Query(value = "SELECT t.trainer_id as trainer_id, COALESCE(AVG(r.rating), 0) as avg_rating " +
             "FROM trainers t " +
             "LEFT JOIN user_applies ua ON t.trainer_id = ua.trainer_id " +
             "LEFT JOIN reviews r ON ua.apply_id = r.apply_id " +
