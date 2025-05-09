@@ -20,7 +20,6 @@ import org.lucky0111.pettalk.service.file.FileUploaderService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +34,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional //DB 작업이 하나의 트랜잭션으로 처리.
-@Slf4j
+
 public class TrainerServiceImpl implements TrainerService {
 
     private final TrainerRepository trainerRepository;
@@ -236,17 +235,12 @@ public class TrainerServiceImpl implements TrainerService {
         }
     }
 
-
-
-
     @Override
     @Transactional(readOnly = true)
     public TrainerDTO getTrainerDetails(String trainerNickname) {
         // 1. Trainer 엔티티 조회 (ID는 UUID)
         Trainer trainer = trainerRepository.findByUser_Nickname(trainerNickname)
                 .orElseThrow(() -> new CustomException("훈련사 정보를 찾을 수 없습니다 ID: %s".formatted(trainerNickname), HttpStatus.NOT_FOUND));
-
-        PetUser user = trainer.getUser();
 
         Set<TrainerPhoto> photos = trainer.getPhotos();
         Set<TrainerServiceFee> serviceFees = trainer.getServiceFees();
@@ -260,28 +254,13 @@ public class TrainerServiceImpl implements TrainerService {
 
         ReviewStatsDTO reviewStatsDTO = getReviewStatsDTO(trainer.getTrainerId());
 
-
-        return new TrainerDTO(
-                trainer.getTrainerId(), // UUID 타입
-                user != null ? user.getName() : null,
-                user != null ? user.getNickname() : null,
-                user != null ? user.getProfileImageUrl() : null,
-                user != null ? user.getEmail() : null, // email 필드 추가 (PetUser에 있다고 가정)
-
-                trainer.getTitle(),
-                trainer.getIntroduction(),
-                trainer.getRepresentativeCareer(),
-                trainer.getSpecializationText(),
-                trainer.getVisitingAreas(),
-
+        return convertToTrainerDTO(
+                trainer,
                 photoDTOs,
                 serviceFeeDTOs,
-
-                specializationNames, // 태그 이름 목록 (리스트 형태)
-                certificationDtoList, // 자격증 DTO 목록
-                reviewStatsDTO.averageRating(),
-                reviewStatsDTO.reviewCount()
-
+                specializationNames,
+                certificationDtoList,
+                reviewStatsDTO
         );
     }
 

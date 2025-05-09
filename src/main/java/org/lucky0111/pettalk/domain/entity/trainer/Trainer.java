@@ -25,6 +25,7 @@ public class Trainer extends BaseTimeEntity {
     @JoinColumn(name = "trainer_id")
     private PetUser user;
 
+//    private Integer experienceYears;
     private LocalDateTime approvedAt;
 
     private String title;
