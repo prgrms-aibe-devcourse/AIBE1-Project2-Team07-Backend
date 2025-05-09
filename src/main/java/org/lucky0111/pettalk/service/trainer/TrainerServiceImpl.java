@@ -181,17 +181,12 @@ public class TrainerServiceImpl implements TrainerService {
         }
     }
 
-
-
-
     @Override
     @Transactional(readOnly = true)
     public TrainerDTO getTrainerDetails(String trainerNickname) {
         // 1. Trainer 엔티티 조회 (ID는 UUID)
         Trainer trainer = trainerRepository.findByUser_Nickname(trainerNickname)
                 .orElseThrow(() -> new CustomException("훈련사 정보를 찾을 수 없습니다 ID: %s".formatted(trainerNickname), HttpStatus.NOT_FOUND));
-
-        PetUser user = trainer.getUser();
 
         Set<TrainerPhoto> photos = trainer.getPhotos();
         Set<TrainerServiceFee> serviceFees = trainer.getServiceFees();
@@ -205,29 +200,13 @@ public class TrainerServiceImpl implements TrainerService {
 
         ReviewStatsDTO reviewStatsDTO = getReviewStatsDTO(trainer.getTrainerId());
 
-
-        return new TrainerDTO(
-                trainer.getTrainerId(), // UUID 타입
-                user != null ? user.getName() : null,
-                user != null ? user.getNickname() : null,
-                user != null ? user.getProfileImageUrl() : null,
-                user != null ? user.getEmail() : null, // email 필드 추가 (PetUser에 있다고 가정)
-
-                trainer.getTitle(),
-                trainer.getIntroduction(),
-                trainer.getRepresentativeCareer(),
-                trainer.getSpecializationText(),
-                trainer.getVisitingAreas(),
-                trainer.getExperienceYears() != null ? trainer.getExperienceYears() : 0,
-
+        return convertToTrainerDTO(
+                trainer,
                 photoDTOs,
                 serviceFeeDTOs,
-
-                specializationNames, // 태그 이름 목록 (리스트 형태)
-                certificationDtoList, // 자격증 DTO 목록
-                reviewStatsDTO.averageRating(),
-                reviewStatsDTO.reviewCount()
-
+                specializationNames,
+                certificationDtoList,
+                reviewStatsDTO
         );
     }
 
@@ -292,7 +271,6 @@ public class TrainerServiceImpl implements TrainerService {
                 trainer.getRepresentativeCareer(),
                 trainer.getSpecializationText(),
                 trainer.getVisitingAreas(),
-                trainer.getExperienceYears() != null ? trainer.getExperienceYears() : 0,
                 photoDTOs,
                 serviceFeeDTOs,
                 specializationNames,
