@@ -7,14 +7,18 @@ import org.lucky0111.pettalk.domain.common.UserRole;
 import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
 import org.lucky0111.pettalk.domain.dto.user.UserRegisterDTO;
 import org.lucky0111.pettalk.domain.dto.user.UserResponseDTO;
+import org.lucky0111.pettalk.domain.dto.user.UserUpdateDTO;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.exception.CustomException;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
+import org.lucky0111.pettalk.service.file.FileUploaderService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,6 +26,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserService {
     private final PetUserRepository userRepository;
+    private final FileUploaderService fileUploaderService;
 
     @Transactional
     public boolean withdrawUser(UUID userId) {
@@ -63,6 +68,35 @@ public class UserService {
         }
 
         return userRepository.save(petUser);
+    }
+
+    public UserUpdateDTO updateUser(UserUpdateDTO requestDTO) {
+        UUID userId = getCurrentUserUUID();
+
+        PetUser petUser = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with id:" + userId));
+
+        petUser.setName(requestDTO.name());
+        petUser.setNickname(requestDTO.nickname());
+
+        userRepository.save(petUser);
+
+        return requestDTO;
+    }
+
+    public UserUpdateDTO updateUserImage(MultipartFile image) throws IOException {
+        UUID userId = getCurrentUserUUID();
+
+        PetUser petUser = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with id:" + userId));
+
+        String folderName = "profile/";
+
+        String imageUrl = fileUploaderService.uploadFile(image,folderName);
+        petUser.setProfileImageUrl(imageUrl);
+        userRepository.save(petUser);
+
+        return new UserUpdateDTO(petUser.getName(), petUser.getNickname(), imageUrl) ;
     }
 
     public UserResponseDTO getUserById() {
