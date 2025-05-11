@@ -58,7 +58,7 @@ public class FileUploaderServiceImpl implements FileUploaderService {
 
             // 파일을 S3에 업로드 (InputStream을 사용하여 파일 데이터 전송)
             PutObjectResponse response = s3Client.putObject(putObjectRequest,
-                    software.amazon.awssdk.core.sync.RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+                    RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
 
             // 업로드된 파일의 URL 반환
             return "https://" + bucketName + ".s3.amazonaws.com/" + fileName;

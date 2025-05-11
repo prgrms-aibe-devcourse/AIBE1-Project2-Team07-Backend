@@ -390,7 +390,7 @@ public class ReviewServiceImpl implements ReviewService {
         );
     }
 
-    private String formatDateTime(java.time.LocalDateTime dateTime) {
+    private String formatDateTime(LocalDateTime dateTime) {
         return dateTime != null ? dateTime.format(DATE_FORMATTER) : null;
     }
 
