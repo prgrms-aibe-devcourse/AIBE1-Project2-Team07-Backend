@@ -206,7 +206,11 @@ public class UserApplyServiceImpl implements UserApplyService {
         }
 
         ApplyAnswer response = applyAnswerRepository.findByUserApply(userApply)
-                .orElseThrow(() -> new CustomException("응답 메시지가 없습니다.", HttpStatus.NOT_FOUND));
+                .orElse(null);
+
+        if (response == null) {
+            return null;
+        }
 
         return convertToApplyResponseDTO(response);
     }

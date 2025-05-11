@@ -42,13 +42,6 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String accessToken = header.substring(7);
 
-        // GET 메서드는 필터 통과..
-        if (request.getMethod().equals(HttpMethod.GET.name())) {
-            SecurityContextHolder.getContext().setAuthentication(createAuthenticationToken(accessToken));
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         TokenStatus tokenStatus = tokenProvider.validateToken(accessToken);
 
         switch (tokenStatus) {
@@ -90,7 +83,11 @@ public class JwtFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         AntPathMatcher pathMatcher = new AntPathMatcher();
 
-        return Arrays.stream(excludePath)
+        boolean result = Arrays.stream(excludePath)
                 .anyMatch(pattern -> pathMatcher.match(pattern, path));
+
+        // 로그 출력
+        log.info("[shouldNotFilter] path: {}, should not filter: {}", path, result);
+        return result;
     }
 }

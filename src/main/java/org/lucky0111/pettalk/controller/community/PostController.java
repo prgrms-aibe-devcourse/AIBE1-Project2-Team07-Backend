@@ -36,24 +36,11 @@ public class PostController {
 
     private final PostService postService;
 
-    @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "게시물 목록 조회", description = "게시물 목록을 페이지 단위로 조회합니다.")
-    @GetMapping
-    public ResponseEntity<PostPageDTO> getAllPosts(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(required = false) PostCategory postCategory,
-            @RequestParam(required = false) PetCategory petCategory,
-            @RequestParam(defaultValue = "LATEST") SortType sortType) {
-        log.info("게시물 목록 조회 요청: page={}, postCategoryId={}, petCategoryId={}",
-                page, postCategory, petCategory);
-
-        PostPageDTO posts = postService.getAllPosts(page, postCategory, petCategory, sortType);
-        return ResponseEntity.ok(posts);
-    }
+    private final int PAGE_SIZE = 10;
 
     @Operation(summary = "게시물 검색", description = "게시물 목록을 키워드로 검색합니다.")
-    @GetMapping("/search")
-    public ResponseEntity<PostPageDTO> searchPosts(
+    @GetMapping("/open")
+    public ResponseEntity<PostPageDTO> getAllPosts(
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(required = false) PostCategory postCategory,
@@ -61,7 +48,7 @@ public class PostController {
             @RequestParam(defaultValue = "LATEST") SortType sortType) {
 
         PostPageDTO posts = postService.searchPosts(
-                keyword, page, postCategory, petCategory, sortType);
+                keyword, page, PAGE_SIZE, postCategory, petCategory, sortType);
 
         return ResponseEntity.ok(posts);
     }
@@ -87,7 +74,7 @@ public class PostController {
     }
 
     @Operation(summary = "게시물 상세 조회", description = "특정 게시물을 상세 조회합니다.")
-    @GetMapping("/{postId}")
+    @GetMapping("/{postId}/open")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<PostResponseDTO> getPostById(
             @PathVariable Long postId) {
@@ -102,11 +89,12 @@ public class PostController {
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<PostResponseDTO> createPost(
             @RequestPart PostRequestDTO requestDTO,
-            @RequestPart MultipartFile[] files
+            @RequestPart(required = false) MultipartFile[] files,
+            @RequestPart(required = false) MultipartFile video
     ) throws IOException {
         log.info("게시물 작성 요청: {}", requestDTO);
 
-        PostResponseDTO createdPost = postService.createPost(requestDTO, files);
+        PostResponseDTO createdPost = postService.createPost(requestDTO, files, video);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdPost);
     }
 
@@ -115,10 +103,12 @@ public class PostController {
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<PostResponseDTO> updatePost(
             @PathVariable Long postId,
-            @RequestBody PostUpdateDTO updateDTO) {
+            @RequestPart PostUpdateDTO updateDTO,
+            @RequestPart(required = false) MultipartFile[] files,
+            @RequestPart(required = false) MultipartFile video) throws IOException {
         log.info("게시물 수정 요청: postId={}, {}", postId, updateDTO);
 
-        PostResponseDTO updatedPost = postService.updatePost(postId, updateDTO);
+        PostResponseDTO updatedPost = postService.updatePost(postId, updateDTO, files, video);
         return ResponseEntity.ok(updatedPost);
     }
 

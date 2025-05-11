@@ -32,8 +32,8 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     @Query("SELECT c FROM Comment c WHERE c.parentComment = :parentComment " +
             "AND c.commentId NOT IN :previewIds " +
-            "AND c.commentId < :cursor " +
-            "ORDER BY c.commentId DESC")
+            "AND c.commentId > :cursor " +
+            "ORDER BY c.commentId ASC")
     List<Comment> findRemainingRepliesWithCursor(
             @Param("parentComment") Comment parentComment,
             @Param("previewIds") List<Long> previewIds,
