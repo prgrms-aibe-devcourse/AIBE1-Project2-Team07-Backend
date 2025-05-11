@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum TokenType {
     ACCESS("accessToken"),
-    REFRESH("refreshToken");
+    REFRESH("refreshToken"),
+    DELETE("deleteToken");
     private final String name;
 }

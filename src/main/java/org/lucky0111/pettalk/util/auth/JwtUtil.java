@@ -37,7 +37,7 @@ public class JwtUtil {
                     .signWith(jwtConfig.getSecretKey())
                     .compact();
 
-            log.info("JWT 토큰 생성 성공");
+            log.info("{} 토큰 생성 성공", tokenType.getName());
             return token;
         } catch (Exception e) {
             log.error("JWT 토큰 생성 중 오류 발생: {}", e.getMessage());
@@ -50,6 +50,7 @@ public class JwtUtil {
             case ACCESS -> Date.from(Instant.now().plusMillis(jwtConfig.getAccessTokenExpiresIn()));
             case REFRESH ->
                     Date.from(Instant.now().plusMillis(jwtConfig.getRefreshTokenExpiresInDays() * 24 * 60 * 60 * 1000L));
+            case DELETE -> Date.from(Instant.now().plusMillis(1000L));
         };
     }
 
@@ -123,7 +124,7 @@ public class JwtUtil {
     /**
      * 토큰의 남은 만료 시간을 초 단위로 반환합니다.
      */
-    public long getExpiresIn(String token) {
+    public long getExpiresInSeconds(String token) {
         try {
             Claims claims = extractAllClaims(token);
             if (claims == null) return 0;
@@ -138,6 +139,10 @@ public class JwtUtil {
             log.error("토큰 만료 시간 계산 중 오류 발생: {}", e.getMessage());
             return 0;
         }
+    }
+
+    public Date getExpiration(String token) {
+        return extractAllClaims(token).getExpiration();
     }
 
     /**
