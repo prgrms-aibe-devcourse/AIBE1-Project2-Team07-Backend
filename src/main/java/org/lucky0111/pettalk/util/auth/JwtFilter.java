@@ -34,7 +34,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        String[] excludePath = {"/swagger-ui/**", "/v3/api-docs/**", "/api/v1/auth/**"};
+        String[] excludePath = {"/swagger-ui/**", "/v3/api-docs/**", "/api/v1/auth/**", "/**/open"};
         String path = request.getRequestURI();
         AntPathMatcher pathMatcher = new AntPathMatcher();
 
