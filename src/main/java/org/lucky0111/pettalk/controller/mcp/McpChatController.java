@@ -22,4 +22,18 @@ public class McpChatController {
     public ResponseEntity<?> userChat(@RequestParam String prompt) {
         return ResponseEntity.ok(Map.of("message", mcpService.userChat(prompt)));
     }
+
+    @GetMapping("/tag/trainer")
+    public ResponseEntity<?> makeTagListForTrainer(@RequestParam String specializationText,
+                                                    @RequestParam String representativeCareer,
+                                                    @RequestParam String introduction) {
+        return ResponseEntity.ok(Map.of("tags", mcpService.makeTagListForTrainer(specializationText, representativeCareer, introduction)));
+    }
+
+    @GetMapping("/tag/post")
+    public ResponseEntity<?> makeTagListForPost(@RequestParam String title,
+                                                   @RequestParam String content,
+                                                   @RequestParam String tags) {
+        return ResponseEntity.ok(Map.of("tags", mcpService.makeTagListForPost(title, content, tags)));
+    }
 }
