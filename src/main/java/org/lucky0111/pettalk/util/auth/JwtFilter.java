@@ -34,7 +34,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        String[] excludePath = {"/swagger-ui/**", "/v3/api-docs/**", "/api/v1/auth/**", "/**/open"};
+        String[] excludePath = {"/swagger-ui/**", "/v3/api-docs/**", "/api/v1/auth/**"};
         String path = request.getRequestURI();
         AntPathMatcher pathMatcher = new AntPathMatcher();
 
@@ -45,9 +45,13 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String header = request.getHeader("Authorization");
+        String path = request.getRequestURI();
 
         if (header == null || !header.startsWith("Bearer ")) {
-            log.info("Authorization Header Not Found");
+            if (path.contains("/open")){
+                filterChain.doFilter(request, response);
+                return;
+            }
             createErrorResponse(response, HttpStatus.FORBIDDEN, "엑세스 토큰이 없습니다.");
             return;
         }
