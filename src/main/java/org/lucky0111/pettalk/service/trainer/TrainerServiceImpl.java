@@ -258,14 +258,16 @@ public class TrainerServiceImpl implements TrainerService {
         // makeTagListForTrainer 메소드가 예외를 던진다면 여기서 처리하거나 throws 해야 함
         List<String> recommendedTagNames = mcpService.makeTagListForTrainer(specializationText, career, introduction);
 
+        Set<String> uniqueRecommendedTagNames = new HashSet<>(recommendedTagNames);
+
         if (trainer.getTrainerTagRelations() != null) {
             trainer.getTrainerTagRelations().clear();
         } else {
             trainer.setTrainerTagRelations(new HashSet<>());
         }
 
-        if (recommendedTagNames != null && !recommendedTagNames.isEmpty()) {
-            for (String tagName : recommendedTagNames) {
+        if (!uniqueRecommendedTagNames.isEmpty()) {
+            for (String tagName : uniqueRecommendedTagNames) {
                 Optional<Tag> tagOptional = tagRepository.findByTagName(tagName);
 
                 if (tagOptional.isPresent()) {

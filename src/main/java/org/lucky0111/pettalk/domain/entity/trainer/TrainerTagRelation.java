@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 import org.lucky0111.pettalk.domain.entity.common.Tag;
 
+import java.util.Objects;
+
 @Getter
 @Setter
 @Entity
@@ -16,11 +18,26 @@ public class TrainerTagRelation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tag_id")
     private Tag tag;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trainer_id")
     private Trainer trainer;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TrainerTagRelation that = (TrainerTagRelation) o;
+
+        return Objects.equals(trainer, that.trainer) &&
+                Objects.equals(tag, that.tag);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(trainer, tag);
+    }
 }
