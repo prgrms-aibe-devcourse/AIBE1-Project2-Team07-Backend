@@ -17,7 +17,6 @@ import java.util.List;
 @Entity
 @Table(name = "posts", indexes = {
         @Index(name = "idx_post_title", columnList = "title"),
-        @Index(name = "idx_post_content", columnList = "content"),
         @Index(name = "idx_post_category", columnList = "postCategory"),
         @Index(name = "idx_pet_category", columnList = "petCategory"),
         @Index(name = "idx_like_count", columnList = "likeCount"),
@@ -42,7 +41,11 @@ public class Post extends BaseTimeEntity {
     private PetUser user;
 
     private String title;
+
+    @Lob
+    @Column
     private String content;
+
     private String videoUrl;
 
     @Column(nullable = false)

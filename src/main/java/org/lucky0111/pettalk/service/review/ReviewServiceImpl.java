@@ -115,7 +115,7 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional(readOnly = true)
     public List<ReviewResponseDTO> getReviewsByTrainerNickname(String trainerNickname) {
-        UUID currentUserUUID = getCurrentUserUUID();
+        UUID currentUserUUID = getCurrentUserUUIDOrNull();
         Trainer trainer = trainerRepository.findByUser_Nickname(trainerNickname)
                 .orElseThrow(() -> new CustomException(ErrorCode.TRAINER_NOT_FOUND));
 
@@ -400,6 +400,15 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         throw new CustomException("사용자를 찾을 수 없습니다.", HttpStatus.UNAUTHORIZED);
+    }
+
+    private UUID getCurrentUserUUIDOrNull() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated() &&
+                authentication.getPrincipal() instanceof CustomOAuth2User userDetails) {
+            return userDetails.getUserId();
+        }
+        return null;
     }
 
     private PetUser getCurrentUser() {
