@@ -115,7 +115,7 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional(readOnly = true)
     public List<ReviewResponseDTO> getReviewsByTrainerNickname(String trainerNickname) {
-        UUID currentUserUUID = getCurrentUserUUID();
+        UUID currentUserUUID = getCurrentUserUUIDOrNull();
         Trainer trainer = trainerRepository.findByUser_Nickname(trainerNickname)
                 .orElseThrow(() -> new CustomException(ErrorCode.TRAINER_NOT_FOUND));
 
@@ -170,8 +170,6 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional(readOnly = true)
     public List<ReviewResponseDTO> getTopLikedReviews(int limit) {
-        UUID currentUserUUID = getCurrentUserUUID();
-
         List<Long> topReviewIds = findTopReviewIdsByLikeCount(limit);
         if (topReviewIds.isEmpty()) {
             return Collections.emptyList();
@@ -182,7 +180,7 @@ public class ReviewServiceImpl implements ReviewService {
         sortReviewsByLikeCount(reviews, topReviewIds);
 
         Map<Long, Integer> likeCounts = getLikeCountsMap(reviews);
-        Map<Long, Boolean> userLikedMap = getUserLikedStatusMap(reviews, currentUserUUID);
+        Map<Long, Boolean> userLikedMap = getUserLikedStatusMap(reviews, null);
 
         return convertToResponseDTOList(reviews, likeCounts, userLikedMap);
     }
@@ -402,6 +400,15 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         throw new CustomException("사용자를 찾을 수 없습니다.", HttpStatus.UNAUTHORIZED);
+    }
+
+    private UUID getCurrentUserUUIDOrNull() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated() &&
+                authentication.getPrincipal() instanceof CustomOAuth2User userDetails) {
+            return userDetails.getUserId();
+        }
+        return null;
     }
 
     private PetUser getCurrentUser() {
