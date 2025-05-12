@@ -165,8 +165,13 @@ public class AdminServiceImpl implements AdminService {
         List<AdminPostDTO> postDTOS = posts.stream()
                 .map(post -> new AdminPostDTO(
                         post.getPostId(),
+                        post.getPostCategory(),
+                        post.getPetCategory(),
+                        post.getCreatedAt(),
                         post.getTitle(),
                         post.getContent(),
+                        post.getLikeCount(),
+                        post.getCommentCount(),
                         post.getUser().getUserId(),
                         post.getUser().getName(),
                         post.getUser().getNickname()))
