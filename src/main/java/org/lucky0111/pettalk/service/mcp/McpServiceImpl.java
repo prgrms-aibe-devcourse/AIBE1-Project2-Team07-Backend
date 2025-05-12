@@ -34,7 +34,7 @@ public class McpServiceImpl implements McpService {
         String prompt = String.format(
                 """
                 ### 태그 생성 순서
-                1. **DB에 저장된 태그 목록을 요청합니다.**
+                1. **DB에 저장된 태그 목록을 요청합니다.** 툴 이름: getTagsInDB
                 2. DB에 있는 태그 목록을 기반으로 사용자가 제공한 정보에 맞는 태그를 생성합니다.
                 **DB에 저장된 태그 목록을 요청**하여 DB에 있는 태그 목록을 기반으로 훈련사 정보를 태그로 생성하세요.
                 태그 변환해야할 훈련사 정보:
@@ -102,7 +102,7 @@ public class McpServiceImpl implements McpService {
         String prompt = String.format(
                 """
                 ### 태그 생성 순서
-                1. **DB에 저장된 태그 목록을 요청합니다.**
+                1. **DB에 저장된 태그 목록을 요청합니다.** 툴 이름: getTagsInDB
                 2. DB에 있는 태그 목록을 기반으로 사용자가 제공한 정보에 맞는 태그를 생성합니다.
                 **DB에 저장된 태그 목록을 요청**하여 DB에 있는 태그 목록을 기반으로 게시글 정보를 태그로 생성하세요.
                 태그 변환해야할 게시글 정보:
