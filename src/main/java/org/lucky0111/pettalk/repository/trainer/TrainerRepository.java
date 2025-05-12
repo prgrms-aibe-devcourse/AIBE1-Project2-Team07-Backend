@@ -122,6 +122,9 @@ public interface TrainerRepository extends JpaRepository<Trainer, UUID> {
             @Param("keyword") String keyword,
             @Param("searchType") String searchType);
 
+    @Query(value = "SELECT * FROM trainers ORDER BY RAND() LIMIT 3", nativeQuery = true)
+    List<Trainer> findRandomTrainers();
+
     @Query("SELECT COUNT(t) FROM Trainer t")
     long countTrainers();
 }

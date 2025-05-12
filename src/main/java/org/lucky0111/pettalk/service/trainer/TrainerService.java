@@ -25,4 +25,6 @@ public interface TrainerService {
     TrainerPageDTO getAllTrainers(int page, int size, TrainerSortType sortType);
 
     void updateTrainerProfile(UUID authenticatedUserId, UUID trainerId, TrainerProfileUpdateDTO updateDTO, List<MultipartFile> photos);
+
+    List<TrainerDTO> getRandomTrainers();
 }

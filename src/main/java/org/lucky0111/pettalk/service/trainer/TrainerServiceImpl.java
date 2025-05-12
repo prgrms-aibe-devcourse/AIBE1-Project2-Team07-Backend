@@ -93,6 +93,32 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<TrainerDTO> getRandomTrainers(){
+        List<Trainer> randomTrainers = trainerRepository.findRandomTrainers();
+
+        List<UUID> trainerIds = randomTrainers.stream()
+                .map(Trainer::getTrainerId)
+                .collect(Collectors.toList());
+
+        Map<UUID, List<CertificationDTO>> certificationMap = getCertificationMapForTrainers(trainerIds);
+        Map<UUID, List<String>> specializationMap = getSpecializationMapForTrainers(trainerIds);
+        Map<UUID, ReviewStatsDTO> reviewStatsMap = getReviewStatsMapForTrainers(trainerIds);
+
+        List<TrainerDTO> trainerDTOs = randomTrainers.stream()
+                .map(trainer -> convertToTrainerDTO(
+                        trainer,
+                        getPhotosDTO(trainer.getPhotos()),
+                        getServiceFeesDTO(trainer.getServiceFees()),
+                        specializationMap.getOrDefault(trainer.getTrainerId(), Collections.emptyList()),
+                        certificationMap.getOrDefault(trainer.getTrainerId(), Collections.emptyList()),
+                        reviewStatsMap.getOrDefault(trainer.getTrainerId(), new ReviewStatsDTO(0.0, 0L))
+                ))
+                .collect(Collectors.toList());
+        return trainerDTOs;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public TrainerPageDTO searchTrainers(String keyword, TrainerSearchType searchType, int page, int size, TrainerSortType sortType) {
         int offset = page * size;
 

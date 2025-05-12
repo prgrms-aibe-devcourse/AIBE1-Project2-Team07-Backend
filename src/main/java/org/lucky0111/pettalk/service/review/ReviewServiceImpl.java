@@ -170,8 +170,6 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional(readOnly = true)
     public List<ReviewResponseDTO> getTopLikedReviews(int limit) {
-        UUID currentUserUUID = getCurrentUserUUID();
-
         List<Long> topReviewIds = findTopReviewIdsByLikeCount(limit);
         if (topReviewIds.isEmpty()) {
             return Collections.emptyList();
@@ -182,7 +180,7 @@ public class ReviewServiceImpl implements ReviewService {
         sortReviewsByLikeCount(reviews, topReviewIds);
 
         Map<Long, Integer> likeCounts = getLikeCountsMap(reviews);
-        Map<Long, Boolean> userLikedMap = getUserLikedStatusMap(reviews, currentUserUUID);
+        Map<Long, Boolean> userLikedMap = getUserLikedStatusMap(reviews, null);
 
         return convertToResponseDTOList(reviews, likeCounts, userLikedMap);
     }

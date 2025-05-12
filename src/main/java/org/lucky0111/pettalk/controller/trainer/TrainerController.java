@@ -59,6 +59,13 @@ public class TrainerController {
         return ResponseEntity.ok().body(dto);
     }
 
+    @GetMapping("/random/open") // 조회만 Nickname을 이용해서.
+    @Operation(summary = "트레이너 전체 내용 조회", description = "Nickname으로 전체 내용을 조회합니다.")
+    public ResponseEntity<List<TrainerDTO>> getRandomTrainer() {
+        List<TrainerDTO> dtos = trainerService.getRandomTrainers();
+        return ResponseEntity.ok().body(dtos);
+    }
+
     @PostMapping("/apply")
     @Operation(summary = "트레이너 승급 신청", description = "승급 신청 시 자격증 정보 필요하며, 파일은 multipart/form-data 필요")
     public ResponseEntity<Void> applyForTrainer(
