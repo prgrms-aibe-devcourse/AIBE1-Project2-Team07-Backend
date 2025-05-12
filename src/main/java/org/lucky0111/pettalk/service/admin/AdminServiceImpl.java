@@ -75,6 +75,7 @@ public class AdminServiceImpl implements AdminService {
         certification.setApproved(true);
 
         certification.getTrainer().getUser().setRole(UserRole.TRAINER);
+        certification.getTrainer().setApprovedAt(java.time.LocalDateTime.now());
 
         certificationRepository.save(certification);
     }
