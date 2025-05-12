@@ -7,8 +7,7 @@ import dev.langchain4j.mcp.client.transport.McpTransport;
 import dev.langchain4j.mcp.client.transport.http.HttpMcpTransport;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.service.AiServices;
 import org.lucky0111.pettalk.assistants.McpTagAssistant;
 import org.lucky0111.pettalk.assistants.McpUserAssistant;
@@ -60,7 +59,7 @@ public class McpAssistantConfig {
     public McpTransport transport() {
         return new HttpMcpTransport.Builder()
                 .sseUrl(sseUrl)
-                .timeout(Duration.ofSeconds(604800)) // 7일
+                .timeout(Duration.ofSeconds(600))
                 .logRequests(true)
                 .logResponses(true)
                 .build();
@@ -86,20 +85,20 @@ public class McpAssistantConfig {
     }
 
     @Bean
-    public McpUserAssistant mcpUserAssistant(ChatLanguageModel chatLanguageModel,
+    public McpUserAssistant mcpUserAssistant(ChatModel chatLanguageModel,
                                              McpToolProvider toolProvider, ChatMemory chatMemory) {
         return AiServices.builder(McpUserAssistant.class)
-                .chatLanguageModel(chatLanguageModel)
+                .chatModel(chatLanguageModel)
                 .toolProvider(toolProvider)
                 .chatMemory(chatMemory)
                 .build();
     }
 
     @Bean
-    public McpTagAssistant mcpTagAssistant(ChatLanguageModel chatLanguageModel,
-                                            McpToolProvider toolProvider, ChatMemory chatMemory) {
+    public McpTagAssistant mcpTagAssistant(ChatModel chatLanguageModel,
+                                           McpToolProvider toolProvider, ChatMemory chatMemory) {
         return AiServices.builder(McpTagAssistant.class)
-                .chatLanguageModel(chatLanguageModel)
+                .chatModel(chatLanguageModel)
                 .toolProvider(toolProvider)
                 .chatMemory(chatMemory)
                 .build();
