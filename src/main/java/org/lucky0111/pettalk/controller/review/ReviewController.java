@@ -92,7 +92,7 @@ public class ReviewController {
             description = "특정 훈련사의 리뷰 목록을 조회합니다. 인증된 사용자만 접근 가능합니다."
     )
     @SecurityRequirement(name = "bearerAuth")
-    @GetMapping("/trainers/{trainerNickname}")
+    @GetMapping("/trainers/{trainerNickname}/open")
     public ResponseEntity<List<ReviewResponseDTO>> getReviewsByTrainerId(@PathVariable String trainerNickname) {
         log.info("훈련사 별 리뷰 목록 조회 요청: trainerNickname={}", trainerNickname);
         List<ReviewResponseDTO> reviews = reviewService.getReviewsByTrainerNickname(trainerNickname);
@@ -139,7 +139,7 @@ public class ReviewController {
             description = "좋아요 개수가 가장 많은 리뷰를 상위 9개까지 조회합니다."
     )
     @SecurityRequirement(name = "bearerAuth")
-    @GetMapping("/top-liked")
+    @GetMapping("/top-liked/open")
     public ResponseEntity<List<ReviewResponseDTO>> getTopLikedReviews(
             @RequestParam(defaultValue = "9") int limit) {
         log.info("좋아요 상위 리뷰 목록 조회 요청: limit={}", limit);
