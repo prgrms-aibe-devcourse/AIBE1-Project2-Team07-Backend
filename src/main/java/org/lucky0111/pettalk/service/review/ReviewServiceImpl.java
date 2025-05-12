@@ -191,6 +191,10 @@ public class ReviewServiceImpl implements ReviewService {
         UUID currentUserUUID = getCurrentUserUUID();
 
         Review review = reviewRepository.findByUserApply_ApplyId(applyId);
+        if (review == null) {
+            return null;
+        }
+
         return convertToResponseDTO(review, currentUserUUID);
 
     }
@@ -384,7 +388,7 @@ public class ReviewServiceImpl implements ReviewService {
         );
     }
 
-    private String formatDateTime(java.time.LocalDateTime dateTime) {
+    private String formatDateTime(LocalDateTime dateTime) {
         return dateTime != null ? dateTime.format(DATE_FORMATTER) : null;
     }
 

@@ -31,7 +31,7 @@ public class CommentController {
     private final CommentService commentService;
 
     @Operation(summary = "게시물의 댓글 목록 조회", description = "특정 게시물의 댓글 목록을 조회합니다.")
-    @GetMapping("/api/v1/posts/{postId}/comments")
+    @GetMapping("/api/v1/posts/{postId}/comments/open")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<CommentsResponseDTO> getCommentsByPostId(
             @PathVariable Long postId,
@@ -43,14 +43,14 @@ public class CommentController {
     }
 
     @Operation(summary = "댓글의 대댓글 목록 조회", description = "특정 댓글의 대댓글 목록을 조회합니다.")
-    @GetMapping("/api/v1/comments/{commentId}/replies")
+    @GetMapping("/api/v1/comments/{commentId}/replies/open")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<List<CommentResponseDTO>> getRepliesByCommentId(
+    public ResponseEntity<CommentsResponseDTO> getRepliesByCommentId(
             @PathVariable Long commentId,
             @RequestParam(required = false) Long cursor) {
         log.info("댓글의 대댓글 목록 조회 요청: commentId={} cursor={}", commentId, cursor);
 
-        List<CommentResponseDTO> replies = commentService.getRepliesByCommentId(commentId, cursor);
+        CommentsResponseDTO replies = commentService.getRepliesByCommentId(commentId, cursor);
         return ResponseEntity.ok(replies);
     }
 

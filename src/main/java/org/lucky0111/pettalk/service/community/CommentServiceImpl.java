@@ -67,12 +67,16 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CommentResponseDTO> getRepliesByCommentId(Long commentId, Long cursor) {
+    public CommentsResponseDTO getRepliesByCommentId(Long commentId, Long cursor) {
         Comment parentComment = findCommentById(commentId);
         List<Long> previewIds = getPreviewReplyIds(parentComment);
         List<Comment> remainingReplies = fetchRemainingReplies(parentComment, previewIds, cursor);
 
-        return convertCommentsToResponseDTOs(remainingReplies);
+        boolean hasMore = remainingReplies.size() == COMMENT_LIMIT;
+        Long nextCursor = calculateNextCursor(remainingReplies, hasMore);
+        List<CommentResponseDTO> commentDTOs = convertCommentsToResponseDTOs(remainingReplies);
+
+        return new CommentsResponseDTO(commentDTOs, nextCursor, hasMore);
     }
 
     @Override

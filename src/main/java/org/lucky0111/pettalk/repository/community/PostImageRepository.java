@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PostImageRepository extends JpaRepository<PostImage, Long> {
     void deleteByPost(Post post);
+
+    void deleteByImageUrl(String url);
 }
