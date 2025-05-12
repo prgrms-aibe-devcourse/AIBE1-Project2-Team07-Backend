@@ -196,6 +196,7 @@ public class AdminServiceImpl implements AdminService {
         List<AdminCommentDTO> commentDTOS = comments.stream()
                 .map(comment -> new AdminCommentDTO(
                         comment.getCommentId(),
+                        comment.getCreatedAt(),
                         comment.getContent(),
                         comment.getUser().getUserId(),
                         comment.getUser().getName(),
