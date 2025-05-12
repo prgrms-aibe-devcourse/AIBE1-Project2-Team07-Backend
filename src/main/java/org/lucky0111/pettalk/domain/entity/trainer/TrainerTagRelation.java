@@ -2,9 +2,11 @@ package org.lucky0111.pettalk.domain.entity.trainer;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.Setter;
 import org.lucky0111.pettalk.domain.entity.common.Tag;
 
 @Getter
+@Setter
 @Entity
 @Table(name = "trainer_tags", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"tag_id", "trainer_id"})
