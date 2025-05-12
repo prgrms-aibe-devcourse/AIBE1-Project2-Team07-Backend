@@ -73,6 +73,9 @@ public class AdminServiceImpl implements AdminService {
 
         certification.setRejected(false);
         certification.setApproved(true);
+
+        certification.getTrainer().getUser().setRole(UserRole.TRAINER);
+
         certificationRepository.save(certification);
     }
 
@@ -84,8 +87,10 @@ public class AdminServiceImpl implements AdminService {
 
         certification.setRejected(true);
         certification.setApproved(false);
-        certificationRepository.save(certification);
 
+        certification.getTrainer().getUser().setRole(UserRole.USER);
+
+        certificationRepository.save(certification);
     }
 
 
@@ -160,8 +165,13 @@ public class AdminServiceImpl implements AdminService {
         List<AdminPostDTO> postDTOS = posts.stream()
                 .map(post -> new AdminPostDTO(
                         post.getPostId(),
+                        post.getPostCategory(),
+                        post.getPetCategory(),
+                        post.getCreatedAt(),
                         post.getTitle(),
                         post.getContent(),
+                        post.getLikeCount(),
+                        post.getCommentCount(),
                         post.getUser().getUserId(),
                         post.getUser().getName(),
                         post.getUser().getNickname()))

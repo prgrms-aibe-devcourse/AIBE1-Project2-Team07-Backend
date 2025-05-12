@@ -1,6 +1,7 @@
 package org.lucky0111.pettalk.controller.trainer;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.lucky0111.pettalk.domain.common.TrainerSearchType;
@@ -25,6 +26,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/trainers")
 @RequiredArgsConstructor
+@Tag(name = "트레이너 API", description = "트레이너 관련 API 엔드포인트")
 public class TrainerController {
     private final TrainerService trainerService;
 

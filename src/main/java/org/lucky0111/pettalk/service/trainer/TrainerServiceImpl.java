@@ -2,6 +2,8 @@ package org.lucky0111.pettalk.service.trainer;
 
 import com.sun.jdi.request.DuplicateRequestException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.java.Log;
+import lombok.extern.log4j.Log4j2;
 import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.TrainerSearchType;
 import org.lucky0111.pettalk.domain.common.TrainerSortType;
@@ -17,6 +19,9 @@ import org.lucky0111.pettalk.repository.review.ReviewRepository;
 import org.lucky0111.pettalk.repository.trainer.*;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.lucky0111.pettalk.service.file.FileUploaderService;
+import org.lucky0111.pettalk.service.mcp.McpService;
+import org.lucky0111.pettalk.service.mcp.McpServiceImpl;
+import org.lucky0111.pettalk.service.tag.TagService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,10 +36,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static java.rmi.server.LogStream.log;
+
 @Service
 @RequiredArgsConstructor
 @Transactional //DB 작업이 하나의 트랜잭션으로 처리.
-
+@Log
 public class TrainerServiceImpl implements TrainerService {
 
     private final TrainerRepository trainerRepository;
@@ -46,6 +53,8 @@ public class TrainerServiceImpl implements TrainerService {
     private final FileUploaderService fileUploaderService;
     private final TrainerPhotoRepository trainerPhotoRepository;
     private final TrainerServiceFeeRepository trainerServiceFeeRepository;
+    private final TagService tagService;
+    private final McpService mcpService;
 
     @Override
     @Transactional(readOnly = true)
@@ -180,7 +189,7 @@ public class TrainerServiceImpl implements TrainerService {
 
             updateTrainerServiceFees(trainer, updateDTO.serviceFees());
             uploadedFileUrls = updateTrainerPhotos(trainer, photos);
-            // updateTrainerTags(trainer, updateDTO.tags()); // <-- 헬퍼 메소드 호출 예정
+            updateTrainerTags(trainer,updateDTO.representativeCareer(),updateDTO.specializationText(), updateDTO.introduction());
 
             trainerRepository.save(trainer);
         } catch (Exception e) {
@@ -244,6 +253,36 @@ public class TrainerServiceImpl implements TrainerService {
          }
          return uploadedFileUrls;
      }
+
+    private void updateTrainerTags(Trainer trainer, String career, String specializationText, String introduction) throws Exception {
+        // makeTagListForTrainer 메소드가 예외를 던진다면 여기서 처리하거나 throws 해야 함
+        List<String> recommendedTagNames = mcpService.makeTagListForTrainer(specializationText, career, introduction);
+
+        if (trainer.getTrainerTagRelations() != null) {
+            trainer.getTrainerTagRelations().clear();
+        } else {
+            trainer.setTrainerTagRelations(new HashSet<>());
+        }
+
+        if (recommendedTagNames != null && !recommendedTagNames.isEmpty()) {
+            for (String tagName : recommendedTagNames) {
+                Optional<Tag> tagOptional = tagRepository.findByTagName(tagName);
+
+                if (tagOptional.isPresent()) {
+                    Tag tag = tagOptional.get();
+
+                    TrainerTagRelation newRelation = new TrainerTagRelation();
+                    newRelation.setTag(tag);
+
+                    trainer.addTrainerTagRelation(newRelation);
+
+                } else {
+                    log("Warning: 태그이름 : '" + tagName + "' 이 테이블에 존재하지 않음.");
+                }
+            }
+        }
+    }
+
 
     private void deleteExistingTrainerPhotos(Trainer trainer) {
         Set<TrainerPhoto> existingPhotos = trainer.getPhotos();
