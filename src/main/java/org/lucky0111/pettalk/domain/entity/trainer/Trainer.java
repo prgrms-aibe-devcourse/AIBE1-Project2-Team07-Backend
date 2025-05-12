@@ -75,5 +75,9 @@ public class Trainer extends BaseTimeEntity {
         fee.setTrainer(null); // ServiceFee 엔티티에서 Trainer 연결 해제
     }
 
+    public void addTrainerTagRelation(TrainerTagRelation newRelation) {
+        trainerTagRelations.add(newRelation);
+        newRelation.setTrainer(this);
+    }
 }
 
