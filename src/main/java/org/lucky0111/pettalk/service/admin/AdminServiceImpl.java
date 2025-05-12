@@ -56,6 +56,7 @@ public class AdminServiceImpl implements AdminService {
                         certification.getIssueDate(),
                         certification.getFileUrl(),
                         certification.getApproved(),
+                        certification.getRejected(),
                         certification.getTrainer().getTrainerId(),
                         certification.getTrainer().getUser().getName(),
                         certification.getTrainer().getUser().getNickname()))
@@ -70,6 +71,7 @@ public class AdminServiceImpl implements AdminService {
         Certification certification = certificationRepository.findById(certId)
                 .orElseThrow(() -> new IllegalArgumentException("Certification not found with id: " + certId));
 
+        certification.setRejected(false);
         certification.setApproved(true);
         certificationRepository.save(certification);
     }
@@ -80,6 +82,7 @@ public class AdminServiceImpl implements AdminService {
         Certification certification = certificationRepository.findById(certId)
                 .orElseThrow(() -> new IllegalArgumentException("Certification not found with id: " + certId));
 
+        certification.setRejected(true);
         certification.setApproved(false);
         certificationRepository.save(certification);
 
