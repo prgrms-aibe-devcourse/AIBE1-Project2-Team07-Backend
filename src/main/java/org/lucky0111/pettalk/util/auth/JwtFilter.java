@@ -45,21 +45,18 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String header = request.getHeader("Authorization");
+        String path = request.getRequestURI();
 
         if (header == null || !header.startsWith("Bearer ")) {
-            log.info("Authorization Header Not Found");
+            if (path.contains("/open")){
+                filterChain.doFilter(request, response);
+                return;
+            }
             createErrorResponse(response, HttpStatus.FORBIDDEN, "엑세스 토큰이 없습니다.");
             return;
         }
 
         String accessToken = header.substring(7);
-
-        // GET 메서드는 필터 통과..
-//        if (request.getMethod().equals(HttpMethod.GET.name())) {
-//            SecurityContextHolder.getContext().setAuthentication(createAuthenticationToken(accessToken));
-//            filterChain.doFilter(request, response);
-//            return;
-//        }
 
         TokenStatus tokenStatus = tokenProvider.validateToken(accessToken);
 

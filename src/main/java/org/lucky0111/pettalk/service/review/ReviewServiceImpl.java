@@ -193,6 +193,10 @@ public class ReviewServiceImpl implements ReviewService {
         UUID currentUserUUID = getCurrentUserUUID();
 
         Review review = reviewRepository.findByUserApply_ApplyId(applyId);
+        if (review == null) {
+            return null;
+        }
+
         return convertToResponseDTO(review, currentUserUUID);
 
     }

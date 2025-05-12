@@ -1,7 +1,11 @@
 package org.lucky0111.pettalk.service.file;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.lucky0111.pettalk.exception.CustomException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -17,6 +21,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class FileUploaderServiceImpl implements FileUploaderService {
 
+    private static final Log log = LogFactory.getLog(FileUploaderServiceImpl.class);
     private final S3Client s3Client;
 
     @Value("${CLOUD.AWS.S3.BUCKET}")
@@ -27,7 +32,20 @@ public class FileUploaderServiceImpl implements FileUploaderService {
     @Override // 인터페이스 메소드 구현 명시
     public String uploadFile(MultipartFile file, String folderName) {
         try {
-            // 파일명을 UUID로 생성
+            String contentType = file.getContentType();
+            log.info(contentType);
+            log.info(folderName);
+            if (folderName.equals("video/")) {
+                if (contentType == null || !contentType.startsWith("video/")) {
+                    throw new CustomException("비디오 파일만 업로드 가능합니다.", HttpStatus.BAD_REQUEST);
+                }
+            } else {
+                if (contentType == null || !contentType.startsWith("image/")) {
+                    throw new CustomException("이미지 파일만 업로드 가능합니다.", HttpStatus.BAD_REQUEST);
+                }
+            }
+
+
             String fileName = folderName + UUID.randomUUID() + "_" + file.getOriginalFilename();
 
             // S3 업로드 요청 생성

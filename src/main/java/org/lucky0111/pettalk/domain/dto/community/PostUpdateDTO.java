@@ -10,7 +10,7 @@ public record PostUpdateDTO(
         PetCategory petCategory,
         String title,
         String content,
-        String imageUrl,
-        String videoUrl,
+        String deleteImageUrls,
+        boolean deleteVideo,
         List<Long> tagIds
 ) {}

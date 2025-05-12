@@ -18,6 +18,7 @@ import org.lucky0111.pettalk.exception.CustomException;
 import org.lucky0111.pettalk.repository.common.TagRepository;
 import org.lucky0111.pettalk.repository.community.*;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
+import org.lucky0111.pettalk.service.file.FileUploaderService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -28,7 +29,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -45,47 +48,43 @@ public class PostServiceImpl implements PostService {
     private final TagRepository tagRepository;
     private final PostTagRepository postTagRepository;
     private final PostImageRepository postImageRepository;
+    private final FileUploaderService fileUploaderService;
 
-    private static final int PAGE_SIZE = 10;
+    private static final int PAGE_SIZE = 5;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Override
     @Transactional
-    public PostResponseDTO createPost(PostRequestDTO requestDTO) {
+    public PostResponseDTO createPost(PostRequestDTO requestDTO, MultipartFile[] files, MultipartFile video) throws IOException {
         PetUser currentUser = getCurrentUser();
 
         Post post = buildPostFromRequest(requestDTO, currentUser);
-        Post savedPost = postRepository.save(post);
 
-        if (requestDTO.imageUrls() != null) {
-            for (int i = 0; i < requestDTO.imageUrls().size(); i++) {
+        String folderName = "post/";
+        if (files != null)
+        {
+            log.info("files is not null");
+            for (MultipartFile file : files) {
+                String imgUrl = fileUploaderService.uploadFile(file, folderName);
+
                 PostImage postImage = new PostImage();
-                postImage.setImageUrl(requestDTO.imageUrls().get(i));
-                postImage.setPost(savedPost);
+                postImage.setPost(post);
+                postImage.setImageUrl(imgUrl);
                 postImageRepository.save(postImage);
             }
         }
 
+        if (video != null && !video.isEmpty()) {
+            log.info("video file is not empty");
+            String videoUrl = fileUploaderService.uploadFile(video, "video/");
+            post.setVideoUrl(videoUrl);
+        }
+
+        Post savedPost = postRepository.save(post);
+
         savePostTags(savedPost, requestDTO.tagIds());
 
         return convertToResponseDTO(savedPost, currentUser.getUserId());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public PostPageDTO getAllPosts(int page, PostCategory postCategory, PetCategory petCategory, SortType sortType) {
-        UUID currentUserUUID = getCurrentUserUUID();
-
-        Pageable pageable = PageRequest.of(page, PAGE_SIZE);
-
-        Specification<Post> spec = PostSpecification.withFiltersAndSort(null, postCategory, petCategory, sortType);
-
-        Page<Post> postsPage = postRepository.findAll(spec, pageable);
-        List<Post> posts = postsPage.getContent();
-
-        List<PostResponseDTO> postResponses = processPostsToResponses(posts, currentUserUUID);
-
-        return new PostPageDTO(postResponses, page, postsPage.getSize(), postsPage.getTotalPages());
     }
 
     @Override
@@ -112,12 +111,12 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public PostPageDTO searchPosts(
-            String keyword, int page, PostCategory postCategory,
+            String keyword, int page, int size, PostCategory postCategory,
             PetCategory petCategory, SortType sortType) {
 
-        UUID currentUserUUID = getCurrentUserUUID();
+        UUID currentUserUUID = getCurrentUserUUIDOrNull();
 
-        Pageable pageable = PageRequest.of(page, PAGE_SIZE);
+        Pageable pageable = PageRequest.of(page, size);
 
         Specification<Post> spec = PostSpecification.withFiltersAndSort(keyword, postCategory, petCategory, sortType);
 
@@ -132,7 +131,7 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public PostResponseDTO getPostById(Long postId) {
-        UUID currentUserUUID = getCurrentUserUUID();
+        UUID currentUserUUID = getCurrentUserUUIDOrNull();
         Post post = findPostById(postId);
 
         boolean hasLiked = checkUserLikedPost(post, currentUserUUID);
@@ -143,20 +142,59 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional
-    public PostResponseDTO updatePost(Long postId, PostUpdateDTO updateDTO) {
+    public PostResponseDTO updatePost(Long postId, PostUpdateDTO updateDTO, MultipartFile[] files, MultipartFile video) throws IOException {
         UUID currentUserUUID = getCurrentUserUUID();
         Post post = findPostById(postId);
 
         validatePostOwnership(post, currentUserUUID);
         updatePostFromDTO(post, updateDTO);
 
+        if (updateDTO.deleteImageUrls() != null && !updateDTO.deleteImageUrls().isEmpty()) {
+            String[] imageUrlsToDelete = updateDTO.deleteImageUrls().split(",");
+            for (String imageUrl : imageUrlsToDelete) {
+                postImageRepository.deleteByImageUrl(imageUrl.trim());
+                fileUploaderService.deleteFile(imageUrl.trim());
+            }
+        }
+
+        if (updateDTO.deleteVideo()) {
+            if (post.getVideoUrl() != null) {
+                // 실제 파일 시스템에서 비디오 삭제 (필요한 경우)
+                fileUploaderService.deleteFile(post.getVideoUrl());
+                post.setVideoUrl(null);
+            }
+        }
+
+
+        String folderName = "post/";
+        if (files != null)
+        {
+            log.info("files is not null");
+            for (MultipartFile file : files) {
+                String imgUrl = fileUploaderService.uploadFile(file, folderName);
+
+                PostImage postImage = new PostImage();
+                postImage.setPost(post);
+                postImage.setImageUrl(imgUrl);
+                postImageRepository.save(postImage);
+            }
+        }
+
+        if (video != null && !video.isEmpty()) {
+            log.info("video file is not empty");
+            String videoUrl = fileUploaderService.uploadFile(video, "video/");
+            post.setVideoUrl(videoUrl);
+        }
+
         if (updateDTO.tagIds() != null) {
-            updatePostTags(post, updateDTO.tagIds());
+            postTagRepository.deleteByPost(post);
+            postTagRepository.flush();
+            savePostTags(post, updateDTO.tagIds());
         }
 
         Post updatedPost = postRepository.save(post);
 
-        boolean hasLiked = checkUserLikedPost(updatedPost, currentUserUUID);
+        boolean hasLiked = false;
         List<String> tags = fetchPostTags(postId);
 
         return buildPostResponse(updatedPost, currentUserUUID, post.getLikeCount(), post.getCommentCount(), hasLiked, tags);
@@ -218,20 +256,22 @@ public class PostServiceImpl implements PostService {
         post.setPetCategory(requestDTO.petCategory());
         post.setTitle(requestDTO.title());
         post.setContent(requestDTO.content());
-        post.setVideoUrl(requestDTO.videoUrl());
         return post;
     }
 
     private void savePostTags(Post post, List<Long> tagIds) {
         if (tagIds != null && !tagIds.isEmpty()) {
             List<Tag> tags = tagRepository.findAllById(tagIds);
+            List<PostTagRelation> postTags = new ArrayList<>();
 
             for (Tag tag : tags) {
                 PostTagRelation postTag = new PostTagRelation();
                 postTag.setPost(post);
                 postTag.setTag(tag);
-                postTagRepository.save(postTag);
+                postTags.add(postTag);
             }
+
+            postTagRepository.saveAll(postTags);
         }
     }
 
@@ -300,22 +340,6 @@ public class PostServiceImpl implements PostService {
         if (updateDTO.content() != null) {
             post.setContent(updateDTO.content());
         }
-
-        if (updateDTO.videoUrl() != null) {
-            post.setVideoUrl(updateDTO.videoUrl());
-        }
-    }
-
-    private void updatePostTags(Post post, List<Long> tagIds) {
-        postTagRepository.deleteByPost(post);
-
-        List<Tag> tags = tagRepository.findAllById(tagIds);
-        for (Tag tag : tags) {
-            PostTagRelation postTag = new PostTagRelation();
-            postTag.setPost(post);
-            postTag.setTag(tag);
-            postTagRepository.save(postTag);
-        }
     }
 
     private void deletePostRelatedData(Post post) {
@@ -324,6 +348,8 @@ public class PostServiceImpl implements PostService {
         postImageRepository.deleteByPost(post);
         commentRepository.deleteByPost(post);
     }
+
+
 
     private Optional<PostLike> findExistingLike(Post post, PetUser user) {
         return postLikeRepository.findByPostAndUser(post, user);
@@ -403,6 +429,15 @@ public class PostServiceImpl implements PostService {
         }
 
         throw new CustomException(ErrorCode.UNAUTHORIZED);
+    }
+
+    private UUID getCurrentUserUUIDOrNull() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated() &&
+                authentication.getPrincipal() instanceof CustomOAuth2User userDetails) {
+            return userDetails.getUserId();
+        }
+        return null;
     }
 
     private PetUser getCurrentUser() {
