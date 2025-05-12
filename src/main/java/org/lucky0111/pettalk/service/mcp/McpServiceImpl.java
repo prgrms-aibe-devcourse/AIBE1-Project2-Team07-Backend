@@ -41,6 +41,7 @@ public class McpServiceImpl implements McpService {
                 Specialization: %s
                 Representative Career: %s
                 Introduction: %s
+                Specialization, Representative Career, Introduction를 전부 기반으로 훈련사 정보를 태그로 생성하세요.
                 """
                 , specializationText, representativeCareer, introduction);
         log.info("prompt: {}", prompt);
@@ -109,6 +110,7 @@ public class McpServiceImpl implements McpService {
                 title: %s
                 content Career: %s
                 tags: %s
+                title, content, tags 전부 기반으로 게시글 정보를 태그로 생성하세요.
                 """
                 , title, content, tags);
         log.info("prompt: {}", prompt);
