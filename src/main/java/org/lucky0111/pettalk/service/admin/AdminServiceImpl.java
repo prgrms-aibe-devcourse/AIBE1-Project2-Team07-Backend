@@ -74,7 +74,7 @@ public class AdminServiceImpl implements AdminService {
         certification.setRejected(false);
         certification.setApproved(true);
 
-
+        certification.getTrainer().getUser().setRole(UserRole.TRAINER);
 
         certificationRepository.save(certification);
     }
@@ -87,6 +87,9 @@ public class AdminServiceImpl implements AdminService {
 
         certification.setRejected(true);
         certification.setApproved(false);
+
+        certification.getTrainer().getUser().setRole(UserRole.USER);
+
         certificationRepository.save(certification);
     }
 
