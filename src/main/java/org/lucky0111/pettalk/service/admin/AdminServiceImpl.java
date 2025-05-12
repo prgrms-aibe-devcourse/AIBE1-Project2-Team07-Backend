@@ -73,6 +73,9 @@ public class AdminServiceImpl implements AdminService {
 
         certification.setRejected(false);
         certification.setApproved(true);
+
+
+
         certificationRepository.save(certification);
     }
 
@@ -85,7 +88,6 @@ public class AdminServiceImpl implements AdminService {
         certification.setRejected(true);
         certification.setApproved(false);
         certificationRepository.save(certification);
-
     }
 
 
