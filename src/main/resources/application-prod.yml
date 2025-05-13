@@ -1,17 +1,79 @@
 server:
   port: 8443 # 충돌 문제 시 수정
 spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
   jpa:
     hibernate:
       ddl-auto: none
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
-        show_sql: true
-        format_sql: true
+        show_sql: false
+        format_sql: false
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver # MySQL
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+
+  security:
+    oauth2:
+      client:
+        registration:
+          naver:
+            client-name: ${NAVER_CLIENT_NAME}
+            client-id: ${NAVER_CLIENT_ID}
+            client-secret: ${NAVER_CLIENT_SECRET}
+            client-authentication-method: client_secret_post
+            redirect-uri: ${NAVER_CLIENT_REDIRECT_URI}
+            authorization-grant-type: ${NAVER_CLIENT_GRANT_TYPE}
+            scope: ${NAVER_CLIENT_SCOPE}
+
+          kakao:
+            client-name: ${KAKAO_CLIENT_NAME}
+            client-id: ${KAKAO_CLIENT_ID}
+            client-secret: ${KAKAO_CLIENT_SECRET}
+            client-authentication-method: client_secret_post
+            redirect-uri: ${KAKAO_CLIENT_REDIRECT_URI}
+            authorization-grant-type: ${KAKAO_CLIENT_GRANT_TYPE}
+            scope: ${KAKAO_CLIENT_SCOPE}
+
+        provider:
+          naver:
+            authorization-uri: ${NAVER_AUTHORIZATION_URI}
+            token-uri: ${NAVER_TOKEN_URI}
+            user-info-uri: ${NAVER_USER_INFO_URI}
+            user-name-attribute: ${NAVER_USER_NAME_ATTRIBUTE}
+
+          kakao:
+            authorization-uri: ${KAKAO_AUTHORIZATION_URI}
+            token-uri: ${KAKAO_TOKEN_URI}
+            user-info-uri: ${KAKAO_USER_INFO_URI}
+            user-name-attribute: ${KAKAO_USER_NAME_ATTRIBUTE}
+
+  # JWT
+  jwt:
+    # openssl rand -base64 32
+    secret: ${JWT_SECRET}
+    access-token-expiration-ms: ${JWT_ACCESS_TOKEN_EXPIRATION_MS} # 1시간
+    refresh-token-expiration-days: ${JWT_REFRESH_TOKEN_EXPIRATION_DAYS} # 30일
+
+open-api:
+  dev-server-url: ${DEV_SERVER_URL}
+
+front-url: ${FRONT_URL}
+
+langchain4j:
+  mcp:
+    sse-url: ${SSE_URL}
+    search-sse-url: ${SEARCH_SSE_URL}
+
+  google-ai-gemini:
+    chat-model:
+      api-key: ${GEMINI_API_KEY}
+      model-name: ${GEMINI_MODEL}
+      log-requests-and-responses: false # prod에서는 비활성화
