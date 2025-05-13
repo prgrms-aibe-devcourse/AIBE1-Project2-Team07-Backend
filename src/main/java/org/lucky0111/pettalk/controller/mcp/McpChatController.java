@@ -34,6 +34,6 @@ public class McpChatController {
     public ResponseEntity<?> makeTagListForPost(@RequestParam String title,
                                                    @RequestParam String content,
                                                    @RequestParam String tags) {
-        return ResponseEntity.ok(Map.of("tags", mcpService.makeTagListForPost(title, content, tags)));
+        return ResponseEntity.ok(Map.of("tags", mcpService.makeTagListForPost(title, content)));
     }
 }
