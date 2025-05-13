@@ -191,7 +191,7 @@ public class UserApplyController {
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("hasAnyRole('TRAINER', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority('TRAINER', 'ADMIN')")
     public ResponseEntity<?> updateApplyStatus(
             @RequestBody ApplyAnswerRequestDTO answerDTO) {
         log.info("신청 상태 업데이트 요청");

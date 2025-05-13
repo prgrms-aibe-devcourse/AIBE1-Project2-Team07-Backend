@@ -53,8 +53,6 @@ public class ReviewServiceImpl implements ReviewService {
         PetUser currentUser = getCurrentUser();
         UserApply userApply = findUserApplyById(requestDTO.applyId());
 
-
-
         validateUserPermission(userApply, currentUser.getUserId());
         validateApplyStatus(userApply);
         validateNoExistingReview(userApply);
@@ -64,9 +62,13 @@ public class ReviewServiceImpl implements ReviewService {
 
         Review review = buildReviewFromRequest(requestDTO, userApply);
 
-        String folderName = "review/";
-
-        String imgUrl = fileUploaderService.uploadFile(reviewImageFile, folderName);
+        String imgUrl = null;
+        if (reviewImageFile == null) {
+            imgUrl = "https://pet-talk-bucket.s3.amazonaws.com/review/43281f25-9823-45e9-ad7b-74b23d45d3ae_chat.png";
+        }else{
+            String folderName = "review/";
+            imgUrl = fileUploaderService.uploadFile(reviewImageFile, folderName);
+        }
         review.setReviewImageUrl(imgUrl);
 
         Review savedReview = reviewRepository.save(review);

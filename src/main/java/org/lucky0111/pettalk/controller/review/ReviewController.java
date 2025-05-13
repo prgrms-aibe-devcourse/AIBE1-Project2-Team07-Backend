@@ -41,7 +41,7 @@ public class ReviewController {
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<ReviewResponseDTO> createReview(
             @RequestPart ReviewRequestDTO requestDTO,
-            @RequestPart MultipartFile file
+            @RequestPart(required = false) MultipartFile file
             ) throws IOException {
         log.info("리뷰 작성 요청: {}", requestDTO);
         ReviewResponseDTO responseDTO = reviewService.createReview(requestDTO, file);

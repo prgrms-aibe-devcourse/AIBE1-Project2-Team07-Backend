@@ -4,5 +4,7 @@ public enum TrainerSearchType {
     ALL,
     TITLE,
     CONTENT,
-    LOCATION
+    LOCATION,
+    NICKNAME,
+    NAME
 }
