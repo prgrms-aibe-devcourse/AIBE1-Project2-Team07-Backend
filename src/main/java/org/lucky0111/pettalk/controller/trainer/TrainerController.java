@@ -11,7 +11,6 @@ import org.lucky0111.pettalk.domain.dto.trainer.CertificationRequestDTO;
 import org.lucky0111.pettalk.domain.dto.trainer.TrainerDTO;
 import org.lucky0111.pettalk.domain.dto.trainer.TrainerPageDTO;
 import org.lucky0111.pettalk.domain.dto.trainer.TrainerProfileUpdateDTO;
-import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.exception.CustomException;
 import org.lucky0111.pettalk.service.trainer.TrainerService;
 import org.springframework.http.HttpStatus;
@@ -20,6 +19,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,8 +38,8 @@ public class TrainerController {
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "ALL") TrainerSearchType searchType,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "LATEST")TrainerSortType sortType
-            ) {
+            @RequestParam(defaultValue = "LATEST") TrainerSortType sortType
+    ) {
         TrainerPageDTO posts = trainerService.searchTrainers(keyword, searchType, page, PAGE_SIZE, sortType);
         return ResponseEntity.ok(posts);
     }
@@ -89,11 +89,15 @@ public class TrainerController {
             @AuthenticationPrincipal CustomOAuth2User principal, // principal은 CustomOAuth2User 타입
             @PathVariable UUID trainerId,
             @RequestPart("profileData") @Valid TrainerProfileUpdateDTO updateDTO,
-            @RequestPart("photos") List<MultipartFile> photos
+            @RequestPart(value = "photos", required = false) List<MultipartFile> photos
     ) {
         UUID authenticatedUserId = principal.getUserId();
         if (!authenticatedUserId.equals(trainerId)) {
             throw new CustomException("자신의 프로필만 수정할 수 있습니다.", HttpStatus.FORBIDDEN);
+        }
+
+        if (photos == null) {
+            photos = new ArrayList<>();
         }
 
         // 서비스 메소드 호출 (인증된 사용자 ID와 트레이너 ID가 일치함을 검증 후 호출)
