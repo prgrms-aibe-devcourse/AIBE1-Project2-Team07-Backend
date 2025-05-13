@@ -7,5 +7,5 @@ public interface McpService {
 
     List<String> makeTagListForTrainer(String specializationText, String representativeCareer, String introduction);
 
-    public List<String> makeTagListForPost(String title, String content, String tags);
+    public List<String> makeTagListForPost(String title, String content);
 }

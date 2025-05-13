@@ -127,7 +127,7 @@ public class McpServiceImpl implements McpService {
     }
 
     @Override
-    public List<String> makeTagListForPost(String title, String content, String tags) {
+    public List<String> makeTagListForPost(String title, String content) {
 
         String prompt = String.format(
                 """
@@ -143,7 +143,6 @@ public class McpServiceImpl implements McpService {
                 태그 변환해야할 게시글 정보:
                 title: %s
                 content Career: %s
-                tags: %s
                 
                 ### 태그 선택 지침
                 - 반드시 먼저 'getTagsInDB' 도구를 호출하세요.
@@ -154,7 +153,7 @@ public class McpServiceImpl implements McpService {
                 - 태그는 DB에 있는 형태 그대로 사용하세요. 변형하거나 새로 만들지 마세요.
                 - 게시글의 주제와 가장 관련성 높은 태그를 5개 이내로 선택하세요.
                 """
-                , title, content, tags);
+                , title, content);
         log.info("prompt: {}", prompt);
 
         String tagListString = mcpTagAssistant.tag(prompt);
