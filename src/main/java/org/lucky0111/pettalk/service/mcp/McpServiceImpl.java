@@ -21,11 +21,29 @@ import java.util.stream.Collectors;
 public class McpServiceImpl implements McpService {
     private final McpUserAssistant mcpUserAssistant;
     private final McpTagAssistant mcpTagAssistant;
+    private final ContentModerationService contentModerationService;
 
     @Override
     public String userChat(String prompt) {
+
         log.info("user prompt: {}", prompt);
-        return mcpUserAssistant.chat(prompt);
+
+        // 1. 입력 콘텐츠 모더레이션
+        if (!contentModerationService.isSafeContent(prompt)) {
+            log.warn("Unsafe content detected in user prompt");
+            return "해당 내용은 서비스 정책에 맞지 않습니다. 다른 질문을 해주세요.";
+        }
+
+        // 2. Gemini로 응답 생성
+        String response = mcpUserAssistant.chat(prompt);
+
+        // 3. 출력 콘텐츠 모더레이션 (필요한 경우)
+        if (!contentModerationService.isSafeContent(response)) {
+            log.warn("Unsafe content detected in AI response");
+            return contentModerationService.filterContent(response);
+        }
+
+        return response;
     }
 
     @Override
