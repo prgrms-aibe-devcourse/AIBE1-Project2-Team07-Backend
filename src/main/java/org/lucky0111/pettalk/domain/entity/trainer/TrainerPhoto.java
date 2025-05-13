@@ -10,7 +10,7 @@ import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
 @Getter
 @Setter
 @NoArgsConstructor
-@Table(name ="trainer_photos")
+@Table(name = "trainer_photos")
 public class TrainerPhoto extends BaseTimeEntity {
 
     @Id
@@ -24,4 +24,11 @@ public class TrainerPhoto extends BaseTimeEntity {
     @Column(length = 1000)
     private String fileUrl;
     private Integer photoOrder; // 사진 표시 순서 (예: 1, 2)
+
+    public static TrainerPhoto from(String fileUrl, int photoOrder) {
+        TrainerPhoto newPhoto = new TrainerPhoto();
+        newPhoto.setFileUrl(fileUrl);
+        newPhoto.setPhotoOrder(photoOrder);
+        return newPhoto;
+    }
 }

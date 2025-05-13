@@ -7,10 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.lucky0111.pettalk.domain.common.TrainerSearchType;
 import org.lucky0111.pettalk.domain.common.TrainerSortType;
 import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
-import org.lucky0111.pettalk.domain.dto.trainer.CertificationRequestDTO;
-import org.lucky0111.pettalk.domain.dto.trainer.TrainerDTO;
-import org.lucky0111.pettalk.domain.dto.trainer.TrainerPageDTO;
-import org.lucky0111.pettalk.domain.dto.trainer.TrainerProfileUpdateDTO;
+import org.lucky0111.pettalk.domain.dto.trainer.*;
 import org.lucky0111.pettalk.exception.CustomException;
 import org.lucky0111.pettalk.service.trainer.TrainerService;
 import org.springframework.http.HttpStatus;
@@ -108,5 +105,21 @@ public class TrainerController {
         return ResponseEntity.status(HttpStatus.OK).build(); // 200 OK 반환
     }
 
+    @PutMapping("/{trainerId}/images/{photoOrder}")
+    public ResponseEntity<TrainerPhotoDTO> updateTrainerProfileImages(
+            @AuthenticationPrincipal CustomOAuth2User principal,
+            @PathVariable UUID trainerId,
+            @PathVariable int photoOrder,
+            @RequestPart(value = "file") MultipartFile photo) {
+        UUID authenticatedUserId = principal.getUserId();
+
+        if (!authenticatedUserId.equals(trainerId)) {
+            throw new CustomException("자신의 프로필만 수정할 수 있습니다.", HttpStatus.FORBIDDEN);
+        }
+
+        TrainerPhotoDTO trainerPhotoDTO = trainerService.updateTrainerProfileImage(trainerId, photoOrder, photo);
+
+        return ResponseEntity.status(HttpStatus.OK).body(trainerPhotoDTO);
+    }
 }
 
