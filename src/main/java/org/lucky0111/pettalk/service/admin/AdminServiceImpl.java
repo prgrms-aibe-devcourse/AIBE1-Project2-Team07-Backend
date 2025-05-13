@@ -18,6 +18,7 @@ import org.lucky0111.pettalk.service.community.PostService;
 import org.lucky0111.pettalk.service.review.ReviewService;
 import org.lucky0111.pettalk.service.user.UserService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;

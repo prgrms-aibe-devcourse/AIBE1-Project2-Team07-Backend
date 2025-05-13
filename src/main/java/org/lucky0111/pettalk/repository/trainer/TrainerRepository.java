@@ -90,7 +90,9 @@ public interface TrainerRepository extends JpaRepository<Trainer, UUID> {
             "                               LOWER(t.visiting_areas) LIKE CONCAT('%', LOWER(:keyword), '%'))) OR " +
             "      (:searchType = 'TITLE' AND LOWER(t.title) LIKE CONCAT('%', LOWER(:keyword), '%')) OR " +
             "      (:searchType = 'CONTENT' AND LOWER(t.introduction) LIKE CONCAT('%', LOWER(:keyword), '%')) OR " +
-            "      (:searchType = 'LOCATION' AND LOWER(t.visiting_areas) LIKE CONCAT('%', LOWER(:keyword), '%'))) " +
+            "      (:searchType = 'LOCATION' AND LOWER(t.visiting_areas) LIKE CONCAT('%', LOWER(:keyword), '%')) OR " +
+            "      (:searchType = 'NAME' AND LOWER(u.name) LIKE CONCAT('%', LOWER(:keyword), '%')) OR " +
+            "      (:searchType = 'NICKNAME' AND LOWER(u.nickname) LIKE CONCAT('%', LOWER(:keyword), '%'))) " +
             "ORDER BY " +
             "CASE WHEN :sortType = 'REVIEWS' THEN COALESCE(review_counts.review_count, 0) END DESC, " +
             "CASE WHEN :sortType = 'RATING' THEN " +
@@ -116,7 +118,9 @@ public interface TrainerRepository extends JpaRepository<Trainer, UUID> {
             "                               LOWER(t.visiting_areas) LIKE CONCAT('%', LOWER(:keyword), '%'))) OR " +
             "      (:searchType = 'TITLE' AND LOWER(t.title) LIKE CONCAT('%', LOWER(:keyword), '%')) OR " +
             "      (:searchType = 'CONTENT' AND LOWER(t.introduction) LIKE CONCAT('%', LOWER(:keyword), '%')) OR " +
-            "      (:searchType = 'LOCATION' AND LOWER(t.visiting_areas) LIKE CONCAT('%', LOWER(:keyword), '%')))",
+            "      (:searchType = 'LOCATION' AND LOWER(t.visiting_areas) LIKE CONCAT('%', LOWER(:keyword), '%')) OR " +
+            "      (:searchType = 'NAME' AND LOWER(u.name) LIKE CONCAT('%', LOWER(:keyword), '%')) OR " +
+            "      (:searchType = 'NICKNAME' AND LOWER(u.nickname) LIKE CONCAT('%', LOWER(:keyword), '%')))",
             nativeQuery = true)
     long countSearchResults(
             @Param("keyword") String keyword,

@@ -25,7 +25,7 @@ public class Comment extends BaseTimeEntity {
     @JoinColumn(name = "user_id")
     private PetUser user;
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.REMOVE)
     @JoinColumn(name = "parent_comment_id")
     private Comment parentComment;
 

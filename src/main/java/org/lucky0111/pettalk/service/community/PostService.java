@@ -18,5 +18,4 @@ public interface PostService {
     PostResponseDTO updatePost(Long postId, PostUpdateDTO updateDTO, MultipartFile[] files, MultipartFile video) throws IOException;
     void deletePost(Long postId);
     PostLikeResponseDTO toggleLike(Long postId);
-
 }
