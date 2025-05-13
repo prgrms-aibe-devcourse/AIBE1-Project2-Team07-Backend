@@ -255,34 +255,21 @@ public class TrainerServiceImpl implements TrainerService {
      }
 
     private void updateTrainerTags(Trainer trainer, String career, String specializationText, String introduction) throws Exception {
-        // makeTagListForTrainer 메소드가 예외를 던진다면 여기서 처리하거나 throws 해야 함
         List<String> recommendedTagNames = mcpService.makeTagListForTrainer(specializationText, career, introduction);
-
         Set<String> uniqueRecommendedTagNames = new HashSet<>(recommendedTagNames);
 
-        if (trainer.getTrainerTagRelations() != null) {
-            trainer.getTrainerTagRelations().clear();
-        } else {
-            trainer.setTrainerTagRelations(new HashSet<>());
-        }
-
+        List<Long> recommendedTagIds = new ArrayList<>();
         if (!uniqueRecommendedTagNames.isEmpty()) {
             for (String tagName : uniqueRecommendedTagNames) {
-                Optional<Tag> tagOptional = tagRepository.findByTagName(tagName);
-
+                Optional<Tag> tagOptional = tagRepository.findByTagName(tagName); // TagRepository 사용
                 if (tagOptional.isPresent()) {
-                    Tag tag = tagOptional.get();
-
-                    TrainerTagRelation newRelation = new TrainerTagRelation();
-                    newRelation.setTag(tag);
-
-                    trainer.addTrainerTagRelation(newRelation);
-
+                    recommendedTagIds.add(tagOptional.get().getTagId()); // Tag 엔티티에서 ID 가져오기 (getId() 또는 getTagId() 확인)
                 } else {
-                    log("Warning: 태그이름 : '" + tagName + "' 이 테이블에 존재하지 않음.");
+                    log.warning("Warning: 태그이름 : %s 이 테이블에 존재하지 않아 무시합니다.".formatted(tagName)); // 경고 로깅
                 }
             }
         }
+        trainerTagRepository.updateTrainerTags(trainer.getTrainerId(), recommendedTagIds);
     }
 
 
