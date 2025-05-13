@@ -76,9 +76,3 @@ langchain4j:
       api-key: ${GEMINI_API_KEY}
       model-name: ${GEMINI_MODEL}
       log-requests-and-responses: true # prod에서는 비활성화
-
-  together-ai:
-    api-key: ${TOGETHER_AI_API_KEY}
-    base-url: https://api.together.xyz/v1
-    model-name: meta-llama/Llama-3.3-70B-Instruct-Turbo-Free
-    timeout: 60
