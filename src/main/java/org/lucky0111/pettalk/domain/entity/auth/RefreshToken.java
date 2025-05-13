@@ -23,7 +23,8 @@ public class RefreshToken extends BaseTimeEntity {
     private String token;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "FK_USER_TOKEN",
+            foreignKeyDefinition = "FOREIGN KEY (user_id) REFERENCES pet_users(user_id) ON DELETE CASCADE"))
     private PetUser user;
 
     private LocalDateTime expiryDate;
