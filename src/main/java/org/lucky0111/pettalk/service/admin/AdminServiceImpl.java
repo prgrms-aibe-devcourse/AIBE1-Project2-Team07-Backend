@@ -11,6 +11,7 @@ import org.lucky0111.pettalk.domain.entity.trainer.Certification;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.repository.community.CommentRepository;
 import org.lucky0111.pettalk.repository.community.PostRepository;
+import org.lucky0111.pettalk.repository.review.ReviewRepository;
 import org.lucky0111.pettalk.repository.trainer.CertificationRepository;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.lucky0111.pettalk.service.community.CommentService;
@@ -26,6 +27,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class AdminServiceImpl implements AdminService {
 
     private final CertificationRepository certificationRepository;
@@ -34,7 +36,7 @@ public class AdminServiceImpl implements AdminService {
     private final PetUserRepository petUserRepository;
     private final UserService userService;
 
-//    private final ReviewRepository reviewRepository;
+    //    private final ReviewRepository reviewRepository;
     private final ReviewService reviewService;
 
     private final CommentRepository commentRepository;
@@ -42,6 +44,7 @@ public class AdminServiceImpl implements AdminService {
 
     private final PostRepository postRepository;
     private final PostService postService;
+    private final ReviewRepository reviewRepository;
 
 
     @Override
@@ -155,7 +158,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void deleteReviewForAdmin(Long reviewId) {
 
-        reviewService.deleteReview(reviewId);
+        reviewRepository.deleteById(reviewId);
     }
 
 
@@ -185,7 +188,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void deletePostForAdmin(Long postId) {
 
-        postService.deletePost(postId);
+        postRepository.deleteById(postId);
     }
 
 
@@ -210,7 +213,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void deleteCommentForAdmin(Long commentId) {
 
-        commentService.deleteComment(commentId);
+        commentRepository.deleteById(commentId);
     }
 
 }
