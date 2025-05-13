@@ -46,7 +46,6 @@ dependencies {
 
     implementation(platform("software.amazon.awssdk:bom:2.31.38"))
     implementation("software.amazon.awssdk:s3")
-
 }
 
 tasks.named('test') {
