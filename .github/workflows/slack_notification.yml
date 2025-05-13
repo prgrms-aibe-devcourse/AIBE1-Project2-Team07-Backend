@@ -1,13 +1,7 @@
 name: 4. Send Workflow Results to Slack
 
-# 웹훅 워크플로우가 완료되면 실행
 on:
-  workflow_run:
-    workflows: [ "3. Trigger Jenkins Webhook" ]
-    types:
-      - completed
-    branches:
-      - main
+  workflow_call:
 
 jobs:
   slack-notification:
