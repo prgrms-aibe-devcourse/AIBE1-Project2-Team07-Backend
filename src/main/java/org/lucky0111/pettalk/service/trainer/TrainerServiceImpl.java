@@ -3,15 +3,13 @@ package org.lucky0111.pettalk.service.trainer;
 import com.sun.jdi.request.DuplicateRequestException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
-import lombok.extern.log4j.Log4j2;
-import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.TrainerSearchType;
 import org.lucky0111.pettalk.domain.common.TrainerSortType;
 import org.lucky0111.pettalk.domain.common.UserRole;
 import org.lucky0111.pettalk.domain.dto.review.ReviewStatsDTO;
 import org.lucky0111.pettalk.domain.dto.trainer.*;
-import org.lucky0111.pettalk.domain.entity.trainer.*;
 import org.lucky0111.pettalk.domain.entity.common.Tag;
+import org.lucky0111.pettalk.domain.entity.trainer.*;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.exception.CustomException;
 import org.lucky0111.pettalk.repository.common.TagRepository;
@@ -20,9 +18,7 @@ import org.lucky0111.pettalk.repository.trainer.*;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.lucky0111.pettalk.service.file.FileUploaderService;
 import org.lucky0111.pettalk.service.mcp.McpService;
-import org.lucky0111.pettalk.service.mcp.McpServiceImpl;
 import org.lucky0111.pettalk.service.tag.TagService;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -32,11 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
-
-import static java.rmi.server.LogStream.log;
 
 @Service
 @RequiredArgsConstructor
@@ -102,7 +94,7 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<TrainerDTO> getRandomTrainers(){
+    public List<TrainerDTO> getRandomTrainers() {
         List<Trainer> randomTrainers = trainerRepository.findRandomTrainers();
 
         List<UUID> trainerIds = randomTrainers.stream()
@@ -173,7 +165,7 @@ public class TrainerServiceImpl implements TrainerService {
 
         List<String> uploadedFileUrls = new ArrayList<>();
 
-        try{
+        try {
             if (!authenticatedUserId.equals(trainerId)) {
                 throw new CustomException("자신의 프로필만 수정할 수 있습니다.", HttpStatus.FORBIDDEN); // 403 Forbidden
             }
@@ -188,8 +180,10 @@ public class TrainerServiceImpl implements TrainerService {
             trainer.setVisitingAreas(updateDTO.visitingAreas());
 
             updateTrainerServiceFees(trainer, updateDTO.serviceFees());
-            uploadedFileUrls = updateTrainerPhotos(trainer, photos);
-            updateTrainerTags(trainer,updateDTO.representativeCareer(),updateDTO.specializationText(), updateDTO.introduction());
+            if (!photos.isEmpty()) {
+                uploadedFileUrls = updateTrainerPhotos(trainer, photos);
+            }
+            updateTrainerTags(trainer, updateDTO.representativeCareer(), updateDTO.specializationText(), updateDTO.introduction());
 
             trainerRepository.save(trainer);
         } catch (Exception e) {
@@ -226,33 +220,33 @@ public class TrainerServiceImpl implements TrainerService {
         }
     }
 
-     private List<String> updateTrainerPhotos(Trainer trainer, List<MultipartFile> photos) throws IOException {
-         if (photos == null || photos.size() != 2) {
-             throw new CustomException("프로필 사진은 정확히 2장을 첨부해야 합니다.", HttpStatus.BAD_REQUEST);
-         }
-         deleteExistingTrainerPhotos(trainer);
+    private List<String> updateTrainerPhotos(Trainer trainer, List<MultipartFile> photos) throws IOException {
+        if (photos == null || photos.size() != 2) {
+            throw new CustomException("프로필 사진은 정확히 2장을 첨부해야 합니다.", HttpStatus.BAD_REQUEST);
+        }
+        deleteExistingTrainerPhotos(trainer);
 
-         List<String> uploadedFileUrls = new ArrayList<>();
+        List<String> uploadedFileUrls = new ArrayList<>();
 
-         int photoOrder = 0; // 사진 순서 (0부터 시작)
+        int photoOrder = 0; // 사진 순서 (0부터 시작)
 
-         for (MultipartFile photoFile : photos) {
-             if (photoFile.isEmpty()) {
-                 throw new CustomException("첨부된 사진 파일 중 비어있는 파일이 있습니다.", HttpStatus.BAD_REQUEST);
-             }
-             // 파일 업로드 (S3)
-             String folderName = "trainer-photos/" + trainer.getTrainerId() + "/"; // 트레이너 ID별 폴더
-             String fileUrl = fileUploaderService.uploadFile(photoFile, folderName);
-             uploadedFileUrls.add(fileUrl); // 업로드 성공한 URL 추적
+        for (MultipartFile photoFile : photos) {
+            if (photoFile.isEmpty()) {
+                throw new CustomException("첨부된 사진 파일 중 비어있는 파일이 있습니다.", HttpStatus.BAD_REQUEST);
+            }
+            // 파일 업로드 (S3)
+            String folderName = "trainer-photos/" + trainer.getTrainerId() + "/"; // 트레이너 ID별 폴더
+            String fileUrl = fileUploaderService.uploadFile(photoFile, folderName);
+            uploadedFileUrls.add(fileUrl); // 업로드 성공한 URL 추적
 
-             TrainerPhoto newPhoto = new TrainerPhoto();
-             newPhoto.setFileUrl(fileUrl);
-             newPhoto.setPhotoOrder(photoOrder++);
+            TrainerPhoto newPhoto = new TrainerPhoto();
+            newPhoto.setFileUrl(fileUrl);
+            newPhoto.setPhotoOrder(photoOrder++);
 
-             trainer.addPhoto(newPhoto);
-         }
-         return uploadedFileUrls;
-     }
+            trainer.addPhoto(newPhoto);
+        }
+        return uploadedFileUrls;
+    }
 
     private void updateTrainerTags(Trainer trainer, String career, String specializationText, String introduction) throws Exception {
         List<String> recommendedTagNames = mcpService.makeTagListForTrainer(specializationText, career, introduction);
@@ -282,7 +276,7 @@ public class TrainerServiceImpl implements TrainerService {
                     fileUploaderService.deleteFile(photo.getFileUrl());
                 } catch (RuntimeException e) {
                     e.printStackTrace();
-                     throw new CustomException("기존 프로필 사진 S3 삭제 중 오류 발생: " ,e, HttpStatus.INTERNAL_SERVER_ERROR);
+                    throw new CustomException("기존 프로필 사진 S3 삭제 중 오류 발생: ", e, HttpStatus.INTERNAL_SERVER_ERROR);
                 }
             });
             trainer.getPhotos().clear();
@@ -387,7 +381,8 @@ public class TrainerServiceImpl implements TrainerService {
                 reviewStatsDTO.reviewCount()
         );
     }
-    private List<CertificationDTO> getCertificationDTOList(UUID trainerId){
+
+    private List<CertificationDTO> getCertificationDTOList(UUID trainerId) {
         List<Certification> certifications = certificationRepository.findByTrainer_TrainerId(trainerId);
 
         return certifications.stream()
@@ -396,15 +391,16 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
     // 4. 전문 분야(태그) 목록 조회 (Trainer ID는 UUID)
-    private List<String> getSpecializationNames(UUID trainerId){
+    private List<String> getSpecializationNames(UUID trainerId) {
         List<TrainerTagRelation> trainerTags = trainerTagRepository.findByTrainer_TrainerId(trainerId);
         return trainerTags.stream()
                 .map(TrainerTagRelation::getTag) // TrainerTag 엔티티에서 Tag 엔티티를 가져옴 (관계 매핑 필요)
                 .map(Tag::getTagName) // Tag 엔티티에서 태그 이름을 가져옴
                 .toList();
     }
+
     // 5. 평점 및 후기 개수 조회 (ReviewRepository 사용, 인자 타입 UUID)
-    private ReviewStatsDTO getReviewStatsDTO(UUID trainerId){
+    private ReviewStatsDTO getReviewStatsDTO(UUID trainerId) {
         Double averageRating = reviewRepository.findAverageRatingByTrainerId(trainerId);
         Long reviewCount = reviewRepository.countByReviewedTrainerId(trainerId);
 
@@ -473,7 +469,8 @@ public class TrainerServiceImpl implements TrainerService {
         }
         return petUser;
     }
-    private Trainer findOrCreateTrainer(UUID userId, PetUser petUser){
+
+    private Trainer findOrCreateTrainer(UUID userId, PetUser petUser) {
         //PetUser에 연결된 Trainer 엔티티가 이미 있는지 조회하고 없으면 생성.
         return trainerRepository.findById(userId) // Trainer ID = User ID (@MapsID)
                 .orElseGet(() -> {
