@@ -17,10 +17,12 @@ public class PostTagRelation {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "tag_id")
+    @JoinColumn(name = "tag_id", foreignKey = @ForeignKey(name = "FK_POST_TAG",
+            foreignKeyDefinition = "FOREIGN KEY (tag_id) REFERENCES tags(tag_id) ON DELETE CASCADE"))
     private Tag tag;
 
     @ManyToOne
-    @JoinColumn(name = "post_id")
+    @JoinColumn(name = "post_id", foreignKey = @ForeignKey(name = "FK_POST_TAGS",
+            foreignKeyDefinition = "FOREIGN KEY (post_id) REFERENCES posts(post_id) ON DELETE CASCADE"))
     private Post post;
 }

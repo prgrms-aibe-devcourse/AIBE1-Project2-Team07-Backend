@@ -7,6 +7,7 @@ import java.time.LocalDate;
 public record CertificationDTO(
         Long certId,
         String certName,
+        String imgUrl,
         String issuingBody,
         LocalDate issueDate
 ) {
@@ -20,6 +21,7 @@ public record CertificationDTO(
         return new CertificationDTO(
                 certification.getCertId(),
                 certification.getCertName(),
+                certification.getFileUrl(),
                 certification.getIssuingBody(),
                 certification.getIssueDate()
         );

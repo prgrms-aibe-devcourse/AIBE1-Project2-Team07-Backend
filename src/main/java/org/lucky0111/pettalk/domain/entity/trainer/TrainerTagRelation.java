@@ -19,7 +19,8 @@ public class TrainerTagRelation {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tag_id")
+    @JoinColumn(name = "tag_id", foreignKey = @ForeignKey(name = "FK_TAG_TRAINER",
+            foreignKeyDefinition = "FOREIGN KEY (tag_id) REFERENCES tags(tag_id) ON DELETE CASCADE"))
     private Tag tag;
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -21,7 +21,8 @@ public class ReviewLike {
     private Long likeId;
 
     @ManyToOne
-    @JoinColumn(name = "review_id")
+    @JoinColumn(name = "review_id", foreignKey = @ForeignKey(name = "FK_REVIEW_LIKE",
+            foreignKeyDefinition = "FOREIGN KEY (review_id) REFERENCES reviews(review_id) ON DELETE CASCADE"))
     private Review review;
 
     @ManyToOne

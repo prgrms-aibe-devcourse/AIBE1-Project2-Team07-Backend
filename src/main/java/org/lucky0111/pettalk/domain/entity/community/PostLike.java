@@ -17,7 +17,8 @@ public class PostLike {
     private Long likeId;
 
     @ManyToOne
-    @JoinColumn(name = "post_id")
+    @JoinColumn(name = "post_id", foreignKey = @ForeignKey(name = "FK_POST_LIKE",
+            foreignKeyDefinition = "FOREIGN KEY (post_id) REFERENCES posts(post_id) ON DELETE CASCADE"))
     private Post post;
 
     @ManyToOne

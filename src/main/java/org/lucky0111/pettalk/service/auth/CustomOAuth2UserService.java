@@ -58,7 +58,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         user.setEmail(email);
         user.setRole(UserRole.USER);
         user.setProvider(oAuth2Provider.getRegistrationId());
-        user.setProfileImageUrl(""); // TODO: 기본 프사 이미지 URL로 수정 필요
+        user.setProfileImageUrl("https://pet-talk-bucket.s3.ap-northeast-2.amazonaws.com/default.png"); // TODO: 기본 프사 이미지 URL로 수정 필요
         user.setStatus(AccountStatus.ACTIVE.toString());
         return userRepository.save(user);
     }
