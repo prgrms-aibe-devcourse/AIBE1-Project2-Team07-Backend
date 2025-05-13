@@ -3,6 +3,7 @@ package org.lucky0111.pettalk.service.trainer;
 import com.sun.jdi.request.DuplicateRequestException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.java.Log;
+import org.jetbrains.annotations.NotNull;
 import org.lucky0111.pettalk.domain.common.TrainerSearchType;
 import org.lucky0111.pettalk.domain.common.TrainerSortType;
 import org.lucky0111.pettalk.domain.common.UserRole;
@@ -18,7 +19,6 @@ import org.lucky0111.pettalk.repository.trainer.*;
 import org.lucky0111.pettalk.repository.user.PetUserRepository;
 import org.lucky0111.pettalk.service.file.FileUploaderService;
 import org.lucky0111.pettalk.service.mcp.McpService;
-import org.lucky0111.pettalk.service.tag.TagService;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -45,7 +45,6 @@ public class TrainerServiceImpl implements TrainerService {
     private final FileUploaderService fileUploaderService;
     private final TrainerPhotoRepository trainerPhotoRepository;
     private final TrainerServiceFeeRepository trainerServiceFeeRepository;
-    private final TagService tagService;
     private final McpService mcpService;
 
     @Override
@@ -180,9 +179,9 @@ public class TrainerServiceImpl implements TrainerService {
             trainer.setVisitingAreas(updateDTO.visitingAreas());
 
             updateTrainerServiceFees(trainer, updateDTO.serviceFees());
-            if (!photos.isEmpty()) {
-                uploadedFileUrls = updateTrainerPhotos(trainer, photos);
-            }
+//            if (!photos.isEmpty()) {
+//                uploadedFileUrls = updateTrainerPhotos(trainer, photos);
+//            }
             updateTrainerTags(trainer, updateDTO.representativeCareer(), updateDTO.specializationText(), updateDTO.introduction());
 
             trainerRepository.save(trainer);
@@ -201,7 +200,7 @@ public class TrainerServiceImpl implements TrainerService {
 
     }
 
-    private void updateTrainerServiceFees(Trainer trainer, List<ServiceFeeUpdateDTO> serviceFeeDTOs) {
+    private void updateTrainerServiceFees(@NotNull Trainer trainer, List<ServiceFeeUpdateDTO> serviceFeeDTOs) {
         if (trainer.getServiceFees() != null) { // 컬렉션이 null일 경우 체크 (findByIdWithCollections가 잘 로딩하면 필요 없을 수 있음)
             trainer.getServiceFees().clear();
         } else {
@@ -242,10 +241,78 @@ public class TrainerServiceImpl implements TrainerService {
             TrainerPhoto newPhoto = new TrainerPhoto();
             newPhoto.setFileUrl(fileUrl);
             newPhoto.setPhotoOrder(photoOrder++);
-
             trainer.addPhoto(newPhoto);
         }
         return uploadedFileUrls;
+    }
+
+    @Override
+    @Transactional
+    public TrainerPhotoDTO updateTrainerProfileImage(UUID trainerId, int photoOrder, MultipartFile photo) {
+        Trainer trainer = trainerRepository.findByIdWithProfileCollections(trainerId)
+                .orElseThrow(() -> new CustomException(
+                        "트레이너를 찾을 수 없습니다 ID: %s".formatted(trainerId),
+                        HttpStatus.NOT_FOUND));
+
+        // 1) 기존 엔티티 조회
+        TrainerPhoto existingPhoto = trainer.getPhotos().stream()
+                .filter(p -> p.getPhotoOrder() == photoOrder)
+                .findFirst()
+                .orElse(null);
+
+        // 2) 파일 업로드 (S3)
+        String folderName = "trainer-photos/" + trainer.getTrainerId() + "/";
+        String fileUrl;
+        try {
+            fileUrl = fileUploaderService.uploadFile(photo, folderName);
+        } catch (IOException e) {
+            throw new CustomException(
+                    "사진 업로드 중 오류 발생: " + e.getMessage(),
+                    e,
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        if (existingPhoto != null) {
+            // 3a) 기존 파일 S3에서 삭제
+            try {
+                fileUploaderService.deleteFile(existingPhoto.getFileUrl());
+            } catch (RuntimeException e) {
+                throw new CustomException(
+                        "프로필 사진 S3 삭제 중 오류 발생: ",
+                        e,
+                        HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+            // 4a) 기존 엔티티 업데이트 (Dirty Checking)
+            existingPhoto.setFileUrl(fileUrl);
+            return new TrainerPhotoDTO(existingPhoto.getFileUrl(), existingPhoto.getPhotoOrder());
+        }
+        // 3b) 해당 순서에 사진이 없으면 신규 생성
+        TrainerPhoto newPhoto = TrainerPhoto.from(fileUrl, photoOrder);
+        newPhoto.setTrainer(trainer);
+        trainer.getPhotos().add(newPhoto);
+        return new TrainerPhotoDTO(fileUrl, photoOrder);
+    }
+
+
+    private void deleteTrainerProfileImageByPhotoOrder(Trainer trainer, int photoOrder) {
+        Set<TrainerPhoto> photos = trainer.getPhotos();
+
+        TrainerPhoto photoToDelete = photos.stream()
+                .filter(photo -> photo.getPhotoOrder() == photoOrder)
+                .findFirst()
+                .orElse(null);
+
+        if (photoToDelete == null) {
+            return;
+        }
+
+        try {
+            fileUploaderService.deleteFile(photoToDelete.getFileUrl());
+        } catch (RuntimeException e) {
+            throw new CustomException("프로필 사진 S3 삭제 중 오류 발생: ", e, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        photos.remove(photoToDelete);
     }
 
     private void updateTrainerTags(Trainer trainer, String career, String specializationText, String introduction) throws Exception {
@@ -416,6 +483,7 @@ public class TrainerServiceImpl implements TrainerService {
         }
 
         return photos.stream()
+                .sorted(Comparator.comparing(TrainerPhoto::getPhotoOrder))
                 .map(photo -> new TrainerPhotoDTO(
                         photo.getFileUrl(),
                         photo.getPhotoOrder()
