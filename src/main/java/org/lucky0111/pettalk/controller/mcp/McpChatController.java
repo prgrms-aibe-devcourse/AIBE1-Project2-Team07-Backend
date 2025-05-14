@@ -2,12 +2,10 @@ package org.lucky0111.pettalk.controller.mcp;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.lucky0111.pettalk.domain.dto.mcp.McpTagDTO;
 import org.lucky0111.pettalk.service.mcp.McpService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
@@ -30,9 +28,9 @@ public class McpChatController {
         return ResponseEntity.ok(Map.of("tags", mcpService.makeTagListForTrainer(specializationText, representativeCareer, introduction)));
     }
 
-    @GetMapping("/tag/post")
-    public ResponseEntity<?> makeTagListForPost(@RequestParam String title,
-                                                   @RequestParam String content) {
-        return ResponseEntity.ok(Map.of("tags", mcpService.makeTagListForPost(title, content)));
+    @PostMapping("/tag/post")
+    public ResponseEntity<?> makeTagListForPost(@RequestBody McpTagDTO mcpTagDTO) {
+        return ResponseEntity.ok(Map.of("tags",
+                mcpService.makeTagListForPost(mcpTagDTO.title(), mcpTagDTO.content())));
     }
 }
