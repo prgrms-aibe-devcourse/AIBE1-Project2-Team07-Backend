@@ -68,14 +68,15 @@ public class TrainerController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @PostMapping("/{trainerId}/certifications")
+    @PostMapping("/certifications")
     @Operation(summary = "트레이너 자격증 추가", description = "승급 된 이후 자격증을 더 추가할때 사용하며, 파일은 multipart/form-data 필요")
     public ResponseEntity<Void> addTrainerCertification(
-            @PathVariable UUID trainerId, // 경로 변수에서 트레이너 ID 수신 (신청 시작 시 부여받은/생성된 ID)
+            @AuthenticationPrincipal CustomOAuth2User principal,
             @RequestPart("certification") @Valid CertificationRequestDTO certificationDTO,
             @RequestPart("file") MultipartFile certificationFile
     ) {
-        trainerService.addCertification(trainerId, certificationDTO, certificationFile);
+        UUID trainerId = principal.getUserId();
+        trainerService.addCertification(trainerId,certificationDTO, certificationFile);
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }

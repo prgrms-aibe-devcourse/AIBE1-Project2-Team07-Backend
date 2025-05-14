@@ -18,14 +18,16 @@ public class Comment extends BaseTimeEntity {
     private Long commentId;
 
     @ManyToOne
-    @JoinColumn(name = "post_id")
+    @JoinColumn(name = "post_id",
+            foreignKey = @ForeignKey(name = "FK_CHILD_PARENT",
+                    foreignKeyDefinition = "FOREIGN KEY (post_id) REFERENCES posts(post_id) ON DELETE CASCADE"))
     private Post post;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
     private PetUser user;
 
-    @ManyToOne(cascade = CascadeType.REMOVE)
+    @ManyToOne
     @JoinColumn(name = "parent_comment_id")
     private Comment parentComment;
 

@@ -16,7 +16,8 @@ public class PostImage {
     private Long imageId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "post_id")
+    @JoinColumn(name = "post_id", foreignKey = @ForeignKey(name = "FK_POST_IMAGE",
+            foreignKeyDefinition = "FOREIGN KEY (post_id) REFERENCES posts(post_id) ON DELETE CASCADE"))
     private Post post;
 
     private String imageUrl;

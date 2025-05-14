@@ -21,7 +21,8 @@ public class Review extends BaseTimeEntity {
     private Long reviewId;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "apply_id")
+    @JoinColumn(name = "apply_id", foreignKey = @ForeignKey(name = "FK_APPLY_REVIEW",
+            foreignKeyDefinition = "FOREIGN KEY (apply_id) REFERENCES user_applies(apply_id) ON DELETE CASCADE"))
     private UserApply userApply;
 
     @Column(nullable = false)
