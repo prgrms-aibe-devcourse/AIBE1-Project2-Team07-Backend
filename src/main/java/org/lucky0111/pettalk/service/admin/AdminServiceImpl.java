@@ -3,7 +3,10 @@ package org.lucky0111.pettalk.service.admin;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.UserRole;
-import org.lucky0111.pettalk.domain.dto.admin.*;
+import org.lucky0111.pettalk.domain.dto.admin.AdminCertificationDTO;
+import org.lucky0111.pettalk.domain.dto.admin.AdminCommentDTO;
+import org.lucky0111.pettalk.domain.dto.admin.AdminPostDTO;
+import org.lucky0111.pettalk.domain.dto.admin.AdminUserDTO;
 import org.lucky0111.pettalk.domain.dto.review.ReviewResponseDTO;
 import org.lucky0111.pettalk.domain.entity.community.Comment;
 import org.lucky0111.pettalk.domain.entity.community.Post;
@@ -78,7 +81,7 @@ public class AdminServiceImpl implements AdminService {
         certification.setRejected(false);
         certification.setApproved(true);
 
-        certification.getTrainer().getUser().setRole(UserRole.TRAINER);
+        certification.getTrainer().getUser().updateRole(UserRole.TRAINER);
         certification.getTrainer().setApprovedAt(java.time.LocalDateTime.now());
 
         certificationRepository.save(certification);
@@ -93,7 +96,7 @@ public class AdminServiceImpl implements AdminService {
         certification.setRejected(true);
         certification.setApproved(false);
 
-        certification.getTrainer().getUser().setRole(UserRole.USER);
+        certification.getTrainer().getUser().updateRole(UserRole.USER);
 
         certificationRepository.save(certification);
     }
@@ -127,10 +130,10 @@ public class AdminServiceImpl implements AdminService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
 
         if (role != null) {
-            user.setRole(role);
+            user.updateRole(role);
         }
         if (status != null) {
-            user.setStatus(status);
+            user.updateStatus(status);
         }
 
         petUserRepository.save(user);

@@ -2,9 +2,7 @@ package org.lucky0111.pettalk.service.auth;
 
 
 import lombok.RequiredArgsConstructor;
-import org.lucky0111.pettalk.domain.common.AccountStatus;
 import org.lucky0111.pettalk.domain.common.OAuth2Provider;
-import org.lucky0111.pettalk.domain.common.UserRole;
 import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
 import org.lucky0111.pettalk.domain.dto.auth.OAuth2UserInfo;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
@@ -51,15 +49,15 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     }
 
     private PetUser createUser(String socialId, String email, OAuth2Provider oAuth2Provider) {
-        PetUser user = new PetUser();
-        user.setName("임시사용자");
-        user.setNickname("임시사용자_" + UUID.randomUUID());
-        user.setSocialId(socialId);
-        user.setEmail(email);
-        user.setRole(UserRole.USER);
-        user.setProvider(oAuth2Provider.getRegistrationId());
-        user.setProfileImageUrl("https://pet-talk-bucket.s3.ap-northeast-2.amazonaws.com/default.png"); // TODO: 기본 프사 이미지 URL로 수정 필요
-        user.setStatus(AccountStatus.ACTIVE.toString());
+        PetUser user = PetUser.builder()
+                .name("임시사용자")
+                .email(email)
+                .nickname("임시사용자_" + UUID.randomUUID())
+                .profileImageUrl("https://pet-talk-bucket.s3.ap-northeast-2.amazonaws.com/default.png")
+                .provider(oAuth2Provider.getRegistrationId())
+                .socialId(socialId)
+                .build();
+
         return userRepository.save(user);
     }
 }
