@@ -26,22 +26,29 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     public void onAuthenticationSuccess(HttpServletRequest req,
                                         HttpServletResponse res,
                                         Authentication authentication) throws IOException, ServletException {
-        String accessToken = tokenService.createAccessToken(authentication);
-        String refreshToken = tokenService.createRefreshToken(authentication);
-        long accessTokenExpiresIn = tokenService.getExpiresInSeconds(accessToken);
-        long refreshTokenExpiresIn = tokenService.getExpiresInSeconds(refreshToken);
-        tokenService.saveRefreshToken(accessToken);
+        try {
+            String accessToken = tokenService.createAccessToken(authentication);
+            String refreshToken = tokenService.createRefreshToken(authentication);
+            long accessTokenExpiresIn = tokenService.getExpiresInSeconds(accessToken);
+            long refreshTokenExpiresIn = tokenService.getExpiresInSeconds(refreshToken);
+            tokenService.saveRefreshToken(accessToken);
 
-        String redirectUrl = UriComponentsBuilder
-                .fromUriString(frontUrl + "auth/oauth2/callback")
-                .queryParam("accessToken", accessToken)
-                .queryParam("refreshToken", refreshToken)
-                .queryParam("accessTokenExpiresIn", accessTokenExpiresIn)
-                .queryParam("refreshTokenExpiresIn", refreshTokenExpiresIn)
-                .build()
-                .toUriString();
+            String redirectUrl = UriComponentsBuilder
+                    .fromUriString(frontUrl + "auth/oauth2/callback")
+                    .queryParam("accessToken", accessToken)
+                    .queryParam("refreshToken", refreshToken)
+                    .queryParam("accessTokenExpiresIn", accessTokenExpiresIn)
+                    .queryParam("refreshTokenExpiresIn", refreshTokenExpiresIn)
+                    .build()
+                    .toUriString();
 
-        res.sendRedirect(redirectUrl);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+            res.sendRedirect(redirectUrl);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        } catch (Exception e) {
+            res.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            res.getWriter().write("OAuth2 로그인 처리 중 오류가 발생했습니다.");
+            res.getWriter().flush();
+            res.getWriter().close();
+        }
     }
 }
