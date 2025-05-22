@@ -52,7 +52,7 @@ public class Trainer extends BaseTimeEntity {
 
     public void addCertification(Certification certification) {
         certifications.add(certification);
-        certification.setTrainer(this);
+        certification.associateTrainer(this);
     }
 
     public void addPhoto(TrainerPhoto photo) {
