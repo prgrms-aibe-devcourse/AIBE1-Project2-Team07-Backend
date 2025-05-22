@@ -57,7 +57,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .provider(oAuth2Provider.getRegistrationId())
                 .socialId(socialId)
                 .build();
-
+        
         return userRepository.save(user);
     }
 }
