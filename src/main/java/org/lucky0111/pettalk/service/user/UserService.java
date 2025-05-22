@@ -35,8 +35,8 @@ public class UserService {
         if (userOptional.isPresent()) {
             PetUser user = userOptional.get();
             // 실제 삭제 대신 상태를 변경하는 논리적 삭제 (Soft Delete) 방식 적용
-            user.setStatus("WITHDRAWN");
-            user.setSocialId(null);
+            user.updateStatus("WITHDRAWN");
+            user.updateSocialId(null);
             userRepository.save(user);
             return true;
         }
@@ -52,19 +52,19 @@ public class UserService {
         PetUser petUser = userRepository.findById(UUID.fromString(username))
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with id:" + username));
 
-        petUser.setRole(UserRole.USER);
+        petUser.updateRole(UserRole.USER);
 
         if (userRegisterDTO.name() != null && !userRegisterDTO.name().isBlank()) {
-            petUser.setName(userRegisterDTO.name());
+            petUser.updateName(userRegisterDTO.name());
         }
         if (userRegisterDTO.nickname() != null && !userRegisterDTO.nickname().isBlank()) {
             if (userRepository.existsByNickname(userRegisterDTO.nickname())) {
                 throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
             }
-            petUser.setNickname(userRegisterDTO.nickname());
+            petUser.updateNickname(userRegisterDTO.nickname());
         }
         if (userRegisterDTO.profileImageUrl() != null && !userRegisterDTO.profileImageUrl().isBlank()) {
-            petUser.setProfileImageUrl(userRegisterDTO.profileImageUrl());
+            petUser.updateProfileImageUrl(userRegisterDTO.profileImageUrl());
         }
 
         return userRepository.save(petUser);
@@ -76,8 +76,8 @@ public class UserService {
         PetUser petUser = userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with id:" + userId));
 
-        petUser.setName(requestDTO.name());
-        petUser.setNickname(requestDTO.nickname());
+        petUser.updateName(requestDTO.name());
+        petUser.updateNickname(requestDTO.nickname());
 
         userRepository.save(petUser);
 
@@ -92,11 +92,11 @@ public class UserService {
 
         String folderName = "profile/";
 
-        String imageUrl = fileUploaderService.uploadFile(image,folderName);
-        petUser.setProfileImageUrl(imageUrl);
+        String imageUrl = fileUploaderService.uploadFile(image, folderName);
+        petUser.updateProfileImageUrl(imageUrl);
         userRepository.save(petUser);
 
-        return new UserUpdateDTO(petUser.getName(), petUser.getNickname(), imageUrl) ;
+        return new UserUpdateDTO(petUser.getName(), petUser.getNickname(), imageUrl);
     }
 
     public UserResponseDTO getUserById() {
@@ -104,7 +104,7 @@ public class UserService {
 
         PetUser petUser = userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with id:" + userId));
-        
+
         return UserResponseDTO.from(petUser);
     }
 
