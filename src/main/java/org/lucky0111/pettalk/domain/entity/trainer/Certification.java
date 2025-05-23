@@ -29,4 +29,9 @@ public class Certification extends BaseTimeEntity {
     private Boolean approved = false;
     private Boolean rejected = false;
 
+    public void updateApprovalStatus(Boolean approved, Boolean rejected) {
+        this.approved = approved;
+        this.rejected = rejected;
+    }
+
 }
