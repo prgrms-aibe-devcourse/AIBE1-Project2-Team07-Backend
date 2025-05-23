@@ -1,18 +1,17 @@
 package org.lucky0111.pettalk.domain.entity.community;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
 import org.lucky0111.pettalk.domain.common.PetCategory;
+import org.lucky0111.pettalk.domain.dto.community.PostRequestDTO;
+import org.lucky0111.pettalk.domain.dto.community.PostUpdateDTO;
 import org.lucky0111.pettalk.domain.entity.user.PetUser;
 import org.lucky0111.pettalk.domain.common.PostCategory;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Setter
 @Getter
 @Entity
 @Table(name = "posts", indexes = {
@@ -22,7 +21,7 @@ import java.util.List;
         @Index(name = "idx_like_count", columnList = "likeCount"),
         @Index(name = "idx_comment_count", columnList = "commentCount")
 })
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Post extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,14 +35,15 @@ public class Post extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private PetCategory petCategory;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private PetUser user;
 
+    @Column(nullable = false, length = 200)
     private String title;
 
     @Lob
-    @Column
+    @Column(nullable = false)
     private String content;
 
     private String videoUrl;
@@ -68,22 +68,50 @@ public class Post extends BaseTimeEntity {
         this.likeCount++;
     }
 
-    public void decrementCLikeCount() {
+    public void decrementLikeCount() {
         if (this.likeCount > 0) {
             this.likeCount--;
         }
     }
 
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PostImage> images = new ArrayList<>();
-
-    public void addImage(PostImage image) {
-        this.images.add(image);
-        image.setPost(this);
+    @Builder
+    public Post(@NonNull PetUser user, @NonNull PetCategory petCategory, @NonNull PostCategory postCategory, @NonNull String title, @NonNull String content) {
+        this.user = user;
+        this.petCategory = petCategory;
+        this.postCategory = postCategory;
+        this.title = title;
+        this.content = content;
+        this.commentCount = 0;
+        this.likeCount = 0;
     }
 
-    public void removeImage(PostImage image) {
-        this.images.remove(image);
-        image.setPost(null);
+    public static Post of(PostRequestDTO requestDTO, PetUser user) {
+        return Post.builder()
+                .user(user)
+                .petCategory(requestDTO.petCategory())
+                .postCategory(requestDTO.postCategory())
+                .title(requestDTO.title())
+                .content(requestDTO.content())
+                .build();
+    }
+
+    public void updateVideoUrl(String videoUrl) {
+        this.videoUrl = videoUrl;
+    }
+
+    public void updatePost(PostUpdateDTO updateDTO) {
+        if (updateDTO.postCategory() != null) {
+            this.postCategory = updateDTO.postCategory();
+        }
+        if (updateDTO.petCategory() != null) {
+            this.petCategory = updateDTO.petCategory();
+        }
+        if (updateDTO.title() != null && !updateDTO.title().trim().isEmpty()) {
+            this.title = updateDTO.title().trim();
+        }
+        if (updateDTO.content() != null && !updateDTO.content().trim().isEmpty()) {
+            this.content = updateDTO.content().trim();
+        }
     }
 }
+
