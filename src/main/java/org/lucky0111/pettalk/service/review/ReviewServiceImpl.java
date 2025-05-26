@@ -56,7 +56,7 @@ public class ReviewServiceImpl implements ReviewService {
         validateApplyStatus(userApply);
         validateNoExistingReview(userApply);
 
-        userApply.setHasReviewed(true);
+        userApply.updateReviewedStatus(true);
         userApplyRepository.save(userApply);
 
         Review review = buildReviewFromRequest(requestDTO, userApply);
@@ -106,7 +106,7 @@ public class ReviewServiceImpl implements ReviewService {
         Review review = findReviewById(reviewId);
 
         UserApply userApply = review.getUserApply();
-        userApply.setHasReviewed(false);
+        userApply.updateReviewedStatus(false);
         userApplyRepository.save(userApply);
 
         validateReviewOwnership(review, currentUserUUID);

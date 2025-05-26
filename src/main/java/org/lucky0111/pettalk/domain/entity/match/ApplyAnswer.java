@@ -1,18 +1,16 @@
 package org.lucky0111.pettalk.domain.entity.match;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
 import org.lucky0111.pettalk.domain.common.ApplyReason;
 
-@Setter
 @Getter
 @Entity
 @Table(name = "apply_answers")
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ApplyAnswer extends BaseTimeEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long responseId;
@@ -28,4 +26,23 @@ public class ApplyAnswer extends BaseTimeEntity {
     @Column(length = 500, nullable = false)
     private String content;
 
+    @Builder
+    public ApplyAnswer(ApplyReason applyReason, UserApply userApply, String content) {
+        this.applyReason = applyReason;
+        this.userApply = userApply;
+        this.content = content;
+    }
+
+    public static ApplyAnswer from(@NonNull ApplyReason applyReason, @NonNull UserApply userApply, @NonNull String content) {
+        return ApplyAnswer.builder()
+                .applyReason(applyReason)
+                .userApply(userApply)
+                .content(content)
+                .build();
+    }
+
+    public void updateContentAndReason(@NonNull String content, @NonNull ApplyReason reason) {
+        this.content = content;
+        this.applyReason = reason;
+    }
 }
