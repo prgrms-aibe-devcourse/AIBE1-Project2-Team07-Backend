@@ -48,7 +48,6 @@ public class ReviewServiceImpl implements ReviewService {
     private final FileUploaderService fileUploaderService;
 
     @Override
-    @Transactional
     public ReviewResponseDTO createReview(ReviewRequestDTO requestDTO, MultipartFile reviewImageFile) throws IOException {
         PetUser currentUser = getCurrentUser();
         UserApply userApply = findUserApplyById(requestDTO.applyId());

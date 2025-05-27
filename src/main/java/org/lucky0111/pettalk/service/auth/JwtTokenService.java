@@ -30,14 +30,14 @@ public class JwtTokenService {
     private final PetUserRepository petUserRepository;
     private final RefreshTokenRepository refreshTokenRepository;
 
-    public String createAccessToken(Authentication authentication) {
+    public String createAccessToken(Authentication authentication) throws RuntimeException {
         CustomOAuth2User oauthUser = (CustomOAuth2User) authentication.getPrincipal();
         UUID userId = UUID.fromString(oauthUser.getName());
         List<String> roles = extractRoles(authentication);
         return jwtUtil.createJwt(TokenType.ACCESS, userId, roles);
     }
 
-    public String createRefreshToken(Authentication authentication) {
+    public String createRefreshToken(Authentication authentication) throws RuntimeException {
         CustomOAuth2User oauthUser = (CustomOAuth2User) authentication.getPrincipal();
         UUID userId = UUID.fromString(oauthUser.getName());
         List<String> roles = extractRoles(authentication);
@@ -108,7 +108,7 @@ public class JwtTokenService {
         return jwtUtil.validateToken(token);
     }
 
-    public long getExpiresInSeconds(String token) {
+    public long getExpiresInSeconds(String token) throws RuntimeException {
         return jwtUtil.getExpiresInSeconds(token);
     }
 

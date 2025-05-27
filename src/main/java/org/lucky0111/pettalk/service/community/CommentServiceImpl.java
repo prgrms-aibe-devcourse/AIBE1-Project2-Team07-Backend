@@ -20,9 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -41,9 +39,18 @@ public class CommentServiceImpl implements CommentService {
     public CommentResponseDTO createComment(Long postId, CommentRequestDTO requestDTO) {
         PetUser currentUser = getCurrentUser();
         Post post = findPostById(postId);
-        Comment parentComment = findParentCommentIfExists(requestDTO.parentCommentId());
 
-        Comment comment = buildComment(post, currentUser, parentComment, requestDTO.content());
+        Comment parentComment = null;
+        if (requestDTO.parentCommentId() != null) {
+            parentComment = commentRepository.findById(requestDTO.parentCommentId())
+                    .orElseThrow(() -> new CustomException("해당 부모 댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+
+            if (parentComment.getParentComment() != null) {
+                throw new IllegalArgumentException("답글에는 답글을 달 수 없습니다.");
+            }
+        }
+
+        Comment comment = Comment.from(post, currentUser, parentComment, requestDTO.content());
         Comment savedComment = commentRepository.save(comment);
 
         post.incrementCommentCount();
@@ -59,10 +66,11 @@ public class CommentServiceImpl implements CommentService {
         List<Comment> rootComments = fetchRootComments(post, cursor);
 
         boolean hasMore = hasMoreComments(rootComments);
-        Long nextCursor = calculateNextCursor(rootComments, hasMore);
+        Optional<Long> nextCursor = calculateNextCursor(rootComments, hasMore);
+
         List<CommentResponseDTO> commentDTOs = buildCommentResponsesWithReplies(rootComments);
 
-        return new CommentsResponseDTO(commentDTOs, nextCursor, hasMore);
+        return new CommentsResponseDTO(commentDTOs, nextCursor.orElse(null), hasMore);
     }
 
     @Override
@@ -73,20 +81,23 @@ public class CommentServiceImpl implements CommentService {
         List<Comment> remainingReplies = fetchRemainingReplies(parentComment, previewIds, cursor);
 
         boolean hasMore = remainingReplies.size() == COMMENT_LIMIT;
-        Long nextCursor = calculateNextCursor(remainingReplies, hasMore);
+        Optional<Long> nextCursor = calculateNextCursor(remainingReplies, hasMore);
+
         List<CommentResponseDTO> commentDTOs = convertCommentsToResponseDTOs(remainingReplies);
 
-        return new CommentsResponseDTO(commentDTOs, nextCursor, hasMore);
+        return new CommentsResponseDTO(commentDTOs, nextCursor.orElse(null), hasMore);
     }
 
     @Override
     @Transactional
     public CommentResponseDTO updateComment(Long commentId, CommentUpdateDTO updateDTO) {
-        UUID currentUserUUID = getCurrentUserUUID();
+        UUID currentUserUUID = getCurrentUserUUID()
+                .orElseThrow(()-> new CustomException(ErrorCode.UNAUTHORIZED));;
+
         Comment comment = findCommentById(commentId);
 
         validateCommentOwnership(comment, currentUserUUID);
-        comment.setContent(updateDTO.content());
+        comment.updateContent(updateDTO.content());
 
         Comment updatedComment = commentRepository.save(comment);
         return convertToResponseDTO(updatedComment);
@@ -95,7 +106,9 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional
     public void deleteComment(Long commentId) {
-        UUID currentUserUUID = getCurrentUserUUID();
+        UUID currentUserUUID = getCurrentUserUUID()
+                .orElseThrow(()-> new CustomException(ErrorCode.UNAUTHORIZED));;
+
         Comment comment = findCommentById(commentId);
         Post post = comment.getPost();
 
@@ -109,7 +122,8 @@ public class CommentServiceImpl implements CommentService {
     @Override
     @Transactional(readOnly = true)
     public List<MyCommentResponseDTO> getMyComments() {
-        UUID currentUserUUID = getCurrentUserUUID();
+        UUID currentUserUUID = getCurrentUserUUID()
+                .orElseThrow(()-> new CustomException(ErrorCode.UNAUTHORIZED));;
         List<Comment> comments = commentRepository.findByUser_UserId(currentUserUUID);
 
         return comments.stream()
@@ -125,30 +139,6 @@ public class CommentServiceImpl implements CommentService {
     private Comment findCommentById(Long commentId) {
         return commentRepository.findById(commentId)
                 .orElseThrow(() -> new CustomException("해당 댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
-    }
-
-    private Comment findParentCommentIfExists(Long parentCommentId) {
-        if (parentCommentId == null) {
-            return null;
-        }
-
-        Comment parentComment = commentRepository.findById(parentCommentId)
-                .orElseThrow(() -> new CustomException("해당 부모 댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
-
-        if (parentComment.getParentComment() != null) {
-            throw new IllegalArgumentException("답글에는 답글을 달 수 없습니다.");
-        }
-
-        return parentComment;
-    }
-
-    private Comment buildComment(Post post, PetUser user, Comment parentComment, String content) {
-        Comment comment = new Comment();
-        comment.setPost(post);
-        comment.setUser(user);
-        comment.setParentComment(parentComment);
-        comment.setContent(content);
-        return comment;
     }
 
     private MyCommentResponseDTO buildMyCommentResponse(Comment comment) {
@@ -182,11 +172,11 @@ public class CommentServiceImpl implements CommentService {
         return comments.size() == COMMENT_LIMIT;
     }
 
-    private Long calculateNextCursor(List<Comment> comments, boolean hasMore) {
+    private Optional<Long> calculateNextCursor(List<Comment> comments, boolean hasMore) {
         if (!comments.isEmpty() && hasMore) {
-            return comments.get(comments.size() - 1).getCommentId();
+            return Optional.ofNullable(comments.get(comments.size() - 1).getCommentId());
         }
-        return null;
+        return Optional.empty();
     }
 
     private List<Long> getPreviewReplyIds(Comment parentComment) {
@@ -251,7 +241,7 @@ public class CommentServiceImpl implements CommentService {
 
         if (!replies.isEmpty()) {
             // 답글이 있으면 소프트 삭제
-            comment.setContent("삭제된 댓글입니다.");
+            comment.updateContent("삭제된 댓글입니다.");
             commentRepository.save(comment);
         } else {
             // 답글이 없으면 완전히 삭제
@@ -288,19 +278,20 @@ public class CommentServiceImpl implements CommentService {
                 comment.getParentComment().getCommentId() : null;
     }
 
-    private UUID getCurrentUserUUID() {
+    private Optional<UUID> getCurrentUserUUID() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication != null && authentication.isAuthenticated() &&
+        if (authentication != null &&
+                authentication.isAuthenticated() &&
                 authentication.getPrincipal() instanceof CustomOAuth2User userDetails) {
-            return userDetails.getUserId();
+            return Optional.ofNullable(userDetails.getUserId());
         }
-
-        throw new CustomException(ErrorCode.UNAUTHORIZED);
+        return Optional.empty();
     }
 
     private PetUser getCurrentUser() {
-        UUID currentUserUUID = getCurrentUserUUID();
+        UUID currentUserUUID = getCurrentUserUUID()
+                .orElseThrow(()-> new CustomException(ErrorCode.UNAUTHORIZED));
+
         return petUserRepository.findById(currentUserUUID)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }

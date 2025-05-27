@@ -22,7 +22,6 @@ import org.lucky0111.pettalk.service.file.FileUploaderService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -58,27 +57,9 @@ public class PostServiceImpl implements PostService {
     public PostResponseDTO createPost(PostRequestDTO requestDTO, MultipartFile[] files, MultipartFile video) throws IOException {
         PetUser currentUser = getCurrentUser();
 
-        Post post = buildPostFromRequest(requestDTO, currentUser);
+        Post post = Post.of(requestDTO, currentUser);
 
-        String folderName = "post/";
-        if (files != null)
-        {
-            log.info("files is not null");
-            for (MultipartFile file : files) {
-                String imgUrl = fileUploaderService.uploadFile(file, folderName);
-
-                PostImage postImage = new PostImage();
-                postImage.setPost(post);
-                postImage.setImageUrl(imgUrl);
-                postImageRepository.save(postImage);
-            }
-        }
-
-        if (video != null && !video.isEmpty()) {
-            log.info("video file is not empty");
-            String videoUrl = fileUploaderService.uploadFile(video, "video/");
-            post.setVideoUrl(videoUrl);
-        }
+        handleFileUploads(post, files, video);
 
         Post savedPost = postRepository.save(post);
 
@@ -90,7 +71,8 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public List<PostResponseDTO> getMyPosts() {
-        UUID currentUserUUID = getCurrentUserUUID();
+        UUID currentUserUUID = getCurrentUserUUID()
+                .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
 
         List<Post> posts = postRepository.findByUser_UserId(currentUserUUID);
 
@@ -100,7 +82,8 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public List<PostResponseDTO> getLikedPosts() {
-        UUID currentUserUUID = getCurrentUserUUID();
+        UUID currentUserUUID = getCurrentUserUUID()
+                .orElseThrow(() -> new CustomException(ErrorCode.UNAUTHORIZED));
 
         List<Post> posts = postLikeRepository.findPostsByUserId(currentUserUUID);
 
@@ -114,7 +97,8 @@ public class PostServiceImpl implements PostService {
             String keyword, int page, int size, PostCategory postCategory,
             PetCategory petCategory, SortType sortType) {
 
-        UUID currentUserUUID = getCurrentUserUUIDOrNull();
+        UUID currentUserUUID = getCurrentUserUUID()
+                .orElse(null);
 
         Pageable pageable = PageRequest.of(page, size);
 
@@ -131,7 +115,8 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public PostResponseDTO getPostById(Long postId) {
-        UUID currentUserUUID = getCurrentUserUUIDOrNull();
+        UUID currentUserUUID = getCurrentUserUUID()
+                .orElse(null);;
         Post post = findPostById(postId);
 
         boolean hasLiked = checkUserLikedPost(post, currentUserUUID);
@@ -143,54 +128,19 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional
     public PostResponseDTO updatePost(Long postId, PostUpdateDTO updateDTO, MultipartFile[] files, MultipartFile video) throws IOException {
-        UUID currentUserUUID = getCurrentUserUUID();
+        UUID currentUserUUID = getCurrentUserUUID()
+                .orElseThrow(()-> new CustomException(ErrorCode.UNAUTHORIZED));
         Post post = findPostById(postId);
 
         validatePostOwnership(post, currentUserUUID);
+
         updatePostFromDTO(post, updateDTO);
 
-        if (updateDTO.deleteImageUrls() != null && !updateDTO.deleteImageUrls().isEmpty()) {
-            String[] imageUrlsToDelete = updateDTO.deleteImageUrls().split(",");
-            for (String imageUrl : imageUrlsToDelete) {
-                postImageRepository.deleteByImageUrl(imageUrl.trim());
-                fileUploaderService.deleteFile(imageUrl.trim());
-            }
-        }
+        handleFileDeletions(post, updateDTO);
 
-        if (updateDTO.deleteVideo()) {
-            if (post.getVideoUrl() != null) {
-                // 실제 파일 시스템에서 비디오 삭제 (필요한 경우)
-                fileUploaderService.deleteFile(post.getVideoUrl());
-                post.setVideoUrl(null);
-            }
-        }
+        handleFileUploads(post,files,video);
 
-
-        String folderName = "post/";
-        if (files != null)
-        {
-            log.info("files is not null");
-            for (MultipartFile file : files) {
-                String imgUrl = fileUploaderService.uploadFile(file, folderName);
-
-                PostImage postImage = new PostImage();
-                postImage.setPost(post);
-                postImage.setImageUrl(imgUrl);
-                postImageRepository.save(postImage);
-            }
-        }
-
-        if (video != null && !video.isEmpty()) {
-            log.info("video file is not empty");
-            String videoUrl = fileUploaderService.uploadFile(video, "video/");
-            post.setVideoUrl(videoUrl);
-        }
-
-        if (updateDTO.tagIds() != null) {
-            postTagRepository.deleteByPost(post);
-            postTagRepository.flush();
-            savePostTags(post, updateDTO.tagIds());
-        }
+        updatePostTags(post, updateDTO.tagIds());
 
         Post updatedPost = postRepository.save(post);
 
@@ -203,7 +153,9 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional
     public void deletePost(Long postId) {
-        UUID currentUserUUID = getCurrentUserUUID();
+        UUID currentUserUUID = getCurrentUserUUID()
+                .orElseThrow(()-> new CustomException(ErrorCode.UNAUTHORIZED));;
+
         Post post = findPostById(postId);
 
         validatePostOwnership(post, currentUserUUID);
@@ -220,7 +172,7 @@ public class PostServiceImpl implements PostService {
         Optional<PostLike> existingLike = findExistingLike(post, currentUser);
 
         if (existingLike.isPresent()) {
-            post.decrementCLikeCount();
+            post.decrementLikeCount();
             postRepository.save(post);
 
             return handleLikeRemoval(existingLike.get(), post);
@@ -229,6 +181,50 @@ public class PostServiceImpl implements PostService {
             postRepository.save(post);
 
             return handleLikeCreation(post, currentUser);
+        }
+    }
+
+    private void handleFileUploads(Post post, MultipartFile[] files, MultipartFile video) throws IOException {
+        if (files != null)
+        {
+            for (MultipartFile file : files) {
+                String imgUrl = fileUploaderService.uploadFile(file, "post/");
+
+                PostImage postImage = new PostImage();
+                postImage.setPost(post);
+                postImage.setImageUrl(imgUrl);
+                postImageRepository.save(postImage);
+            }
+        }
+
+        if (video != null && !video.isEmpty()) {
+            String videoUrl = fileUploaderService.uploadFile(video, "video/");
+            post.updateVideoUrl(videoUrl);
+        }
+    }
+
+    private void handleFileDeletions(Post post, PostUpdateDTO updateDTO) {
+        if (updateDTO.deleteImageUrls() != null && !updateDTO.deleteImageUrls().isEmpty()) {
+            String[] imageUrlsToDelete = updateDTO.deleteImageUrls().split(",");
+            for (String imageUrl : imageUrlsToDelete) {
+                postImageRepository.deleteByImageUrl(imageUrl.trim());
+                fileUploaderService.deleteFile(imageUrl.trim());
+            }
+        }
+
+        if (updateDTO.deleteVideo()) {
+            if (post.getVideoUrl() != null) {
+                fileUploaderService.deleteFile(post.getVideoUrl());
+                post.updateVideoUrl(null);
+            }
+        }
+    }
+
+    private void updatePostTags(Post post, List<Long> tagIds) {
+        if (tagIds != null) {
+            postTagRepository.deleteByPost(post);
+            postTagRepository.flush();
+            savePostTags(post, tagIds);
         }
     }
 
@@ -247,16 +243,6 @@ public class PostServiceImpl implements PostService {
                         postTagsMap.getOrDefault(post.getPostId(), new ArrayList<>())
                 ))
                 .collect(Collectors.toList());
-    }
-
-    private Post buildPostFromRequest(PostRequestDTO requestDTO, PetUser user) {
-        Post post = new Post();
-        post.setUser(user);
-        post.setPostCategory(requestDTO.postCategory());
-        post.setPetCategory(requestDTO.petCategory());
-        post.setTitle(requestDTO.title());
-        post.setContent(requestDTO.content());
-        return post;
     }
 
     private void savePostTags(Post post, List<Long> tagIds) {
@@ -325,21 +311,7 @@ public class PostServiceImpl implements PostService {
     }
 
     private void updatePostFromDTO(Post post, PostUpdateDTO updateDTO) {
-        if (updateDTO.postCategory() != null) {
-            post.setPostCategory(updateDTO.postCategory());
-        }
-
-        if (updateDTO.petCategory() != null) {
-            post.setPetCategory(updateDTO.petCategory());
-        }
-
-        if (updateDTO.title() != null) {
-            post.setTitle(updateDTO.title());
-        }
-
-        if (updateDTO.content() != null) {
-            post.setContent(updateDTO.content());
-        }
+        post.updatePost(updateDTO);
     }
 
     private void deletePostRelatedData(Post post) {
@@ -393,7 +365,8 @@ public class PostServiceImpl implements PostService {
     private PostResponseDTO buildPostResponse(Post post, UUID currentUserUUID,
                                               int likeCount, int commentCount,
                                               boolean hasLiked, List<String> tags) {
-        List<String> imageUrls = post.getImages().stream()
+        List<PostImage> images = postImageRepository.findByPost(post);
+        List<String> imageUrls = images.stream()
                 .map(PostImage::getImageUrl)
                 .toList();
 
@@ -420,28 +393,19 @@ public class PostServiceImpl implements PostService {
         );
     }
 
-    private UUID getCurrentUserUUID() {
+    private Optional<UUID> getCurrentUserUUID() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication != null && authentication.isAuthenticated() &&
+        if (authentication != null &&
+                authentication.isAuthenticated() &&
                 authentication.getPrincipal() instanceof CustomOAuth2User userDetails) {
-            return userDetails.getUserId();
+            return Optional.ofNullable(userDetails.getUserId());
         }
-
-        throw new CustomException(ErrorCode.UNAUTHORIZED);
-    }
-
-    private UUID getCurrentUserUUIDOrNull() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated() &&
-                authentication.getPrincipal() instanceof CustomOAuth2User userDetails) {
-            return userDetails.getUserId();
-        }
-        return null;
+        return Optional.empty();
     }
 
     private PetUser getCurrentUser() {
-        UUID currentUserUUID = getCurrentUserUUID();
+        UUID currentUserUUID = getCurrentUserUUID()
+                .orElseThrow(()-> new CustomException(ErrorCode.UNAUTHORIZED));
         return petUserRepository.findById(currentUserUUID)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }

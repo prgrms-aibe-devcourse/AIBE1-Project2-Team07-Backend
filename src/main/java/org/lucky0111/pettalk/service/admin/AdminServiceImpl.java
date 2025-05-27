@@ -24,6 +24,7 @@ import org.lucky0111.pettalk.service.user.UserService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -51,6 +52,7 @@ public class AdminServiceImpl implements AdminService {
 
 
     @Override
+    @Transactional(readOnly = true)
     public List<AdminCertificationDTO> getAllCertificationsForAdmin() {
 
         List<Certification> certifications = certificationRepository.findAllWithTrainerAndUser();
@@ -83,7 +85,7 @@ public class AdminServiceImpl implements AdminService {
         certification.approve();
 
         certification.getTrainer().getUser().updateRole(UserRole.TRAINER);
-        certification.getTrainer().setApprovedAt(java.time.LocalDateTime.now());
+        certification.getTrainer().updateApprovedAt(LocalDateTime.now());
 
         certificationRepository.save(certification);
     }
@@ -105,6 +107,7 @@ public class AdminServiceImpl implements AdminService {
 
 
     @Override
+    @Transactional(readOnly = true)
     public List<AdminUserDTO> getAllUsersForAdmin() {
 
         List<PetUser> users = petUserRepository.findAll();
@@ -153,6 +156,7 @@ public class AdminServiceImpl implements AdminService {
 
 
     @Override
+    @Transactional(readOnly = true)
     public List<ReviewResponseDTO> getAllReviewsForAdmin() {
 
         List<ReviewResponseDTO> reviewDTOS = reviewService.getAllReviews();
@@ -168,6 +172,7 @@ public class AdminServiceImpl implements AdminService {
 
 
     @Override
+    @Transactional(readOnly = true)
     public List<AdminPostDTO> getAllPostsForAdmin() {
 
         List<Post> posts = postRepository.findAllWithUser();
@@ -198,6 +203,7 @@ public class AdminServiceImpl implements AdminService {
 
 
     @Override
+    @Transactional(readOnly = true)
     public List<AdminCommentDTO> getAllCommentsForAdmin() {
 
         List<Comment> comments = commentRepository.findAllWithUser();

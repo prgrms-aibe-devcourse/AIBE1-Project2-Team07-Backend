@@ -79,5 +79,9 @@ public class Trainer extends BaseTimeEntity {
         trainerTagRelations.add(newRelation);
         newRelation.setTrainer(this);
     }
+
+    public void updateApprovedAt(LocalDateTime approvedAt) {
+        this.approvedAt = approvedAt;
+    }
 }
 

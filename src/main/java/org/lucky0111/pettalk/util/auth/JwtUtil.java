@@ -22,7 +22,7 @@ public class JwtUtil {
     /**
      * JWT 토큰을 생성합니다.
      */
-    public String createJwt(TokenType tokenType, UUID userId, List<String> roles) {
+    public String createJwt(TokenType tokenType, UUID userId, List<String> roles) throws RuntimeException {
         try {
             Instant now = Instant.now();
             Date issuedAt = Date.from(now);
@@ -41,7 +41,7 @@ public class JwtUtil {
             return token;
         } catch (Exception e) {
             log.error("JWT 토큰 생성 중 오류 발생: {}", e.getMessage());
-            return null;
+            throw new RuntimeException("JWT 토큰 생성 중 오류 발생", e);
         }
     }
 
@@ -91,40 +91,9 @@ public class JwtUtil {
     }
 
     /**
-     * 토큰이 만료되었는지 확인합니다.
-     */
-    public boolean isExpired(String token) {
-        try {
-            Claims claims = extractAllClaims(token);
-            if (claims == null) return true;
-
-            return claims.getExpiration().before(new Date());
-        } catch (Exception e) {
-            log.error("토큰 만료 확인 중 오류 발생: {}", e.getMessage());
-            return true;
-        }
-    }
-
-    /**
-     * 토큰 타입 반환
-     */
-    public TokenType getTokenType(String token) {
-        try {
-            Claims claims = extractAllClaims(token);
-            if (claims == null) return null;
-
-            String type = claims.get("type", String.class);
-            return TokenType.valueOf(type.toUpperCase());
-        } catch (Exception e) {
-            log.error("토큰 타입 가져오기 실패: {}", e.getMessage());
-            return null;
-        }
-    }
-
-    /**
      * 토큰의 남은 만료 시간을 초 단위로 반환합니다.
      */
-    public long getExpiresInSeconds(String token) {
+    public long getExpiresInSeconds(String token) throws RuntimeException {
         try {
             Claims claims = extractAllClaims(token);
             if (claims == null) return 0;
@@ -137,7 +106,7 @@ public class JwtUtil {
             return Math.max(0, diff / 1000);
         } catch (Exception e) {
             log.error("토큰 만료 시간 계산 중 오류 발생: {}", e.getMessage());
-            return 0;
+            throw new RuntimeException("토큰 만료 시간 계산 중 오류 발생", e);
         }
     }
 
