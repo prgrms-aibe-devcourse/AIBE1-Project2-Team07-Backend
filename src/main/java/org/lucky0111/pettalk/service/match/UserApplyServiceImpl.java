@@ -85,7 +85,7 @@ public class UserApplyServiceImpl implements UserApplyService {
 
         validateTrainerPermission(userApply, currentUser.getUserId());
 
-        userApply.setApplyStatus(applyStatus);
+        userApply.updateApplyStatus(applyStatus);
         UserApply updatedApply = userApplyRepository.save(userApply);
 
         return convertToResponseDTO(updatedApply);
@@ -173,24 +173,25 @@ public class UserApplyServiceImpl implements UserApplyService {
 
         validateTrainerPermission(userApply, currentUser.getUserId());
 
-        userApply.setApplyStatus(requestDTO.applyStatus());
+        userApply.updateApplyStatus(requestDTO.applyStatus());
         UserApply updatedApply = userApplyRepository.save(userApply);
 
-        ApplyAnswer applyAnswer = applyAnswerRepository.findByUserApply(userApply)
-                .orElse(new ApplyAnswer());
+        ApplyReason reason = (requestDTO.applyStatus() == ApplyStatus.REJECTED)
+                ? requestDTO.applyReason()
+                : ApplyReason.ACCEPTED;
 
-        applyAnswer.setUserApply(userApply);
-        applyAnswer.setContent(requestDTO.content());
-        if (requestDTO.applyStatus() == ApplyStatus.REJECTED) {
-            applyAnswer.setApplyReason(requestDTO.applyReason());
-        } else {
-            applyAnswer.setApplyReason(ApplyReason.ACCEPTED);
-        }
+        ApplyAnswer applyAnswer = applyAnswerRepository.findByUserApply(userApply)
+                .map(existing -> {
+                    existing.updateContentAndReason(requestDTO.content(), reason);
+                    return existing;
+                })
+                .orElseGet(() -> ApplyAnswer.from(reason, userApply, requestDTO.content()));
 
         applyAnswerRepository.save(applyAnswer);
 
         return convertToResponseDTO(updatedApply);
     }
+
 
     @Override
     @Transactional(readOnly = true)
@@ -216,17 +217,18 @@ public class UserApplyServiceImpl implements UserApplyService {
     }
 
     private UserApply buildUserApplyFromRequest(UserApplyRequestDTO requestDTO, PetUser petUser, Trainer trainer) {
-        UserApply userApply = new UserApply();
-        userApply.setPetUser(petUser);
-        userApply.setTrainer(trainer);
-        userApply.setServiceType(requestDTO.serviceType());
-        userApply.setPetType(requestDTO.petType());
-        userApply.setPetBreed(requestDTO.petBreed());
-        userApply.setPetMonthAge(requestDTO.petMonthAge());
-        userApply.setContent(requestDTO.content());
-        userApply.setApplyStatus(ApplyStatus.PENDING);
-        return userApply;
+        return UserApply.builder()
+                .petUser(petUser)
+                .trainer(trainer)
+                .serviceType(requestDTO.serviceType())
+                .petType(requestDTO.petType())
+                .petBreed(requestDTO.petBreed())
+                .petMonthAge(requestDTO.petMonthAge())
+                .content(requestDTO.content())
+                .applyStatus(ApplyStatus.PENDING)
+                .build();
     }
+
 
     private void validateNoPendingApply(UUID userId, UUID trainerId) {
         if (userApplyRepository.existsByPetUser_userIdAndTrainer_trainerIdAndApplyStatus(
