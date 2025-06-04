@@ -80,7 +80,9 @@ public class AdminServiceImpl implements AdminService {
         Certification certification = certificationRepository.findById(certId)
                 .orElseThrow(() -> new IllegalArgumentException("Certification not found with id: " + certId));
 
-        certification.updateApprovalStatus(true, false);
+//        certification.setRejected(false);
+//        certification.setApproved(true);
+        certification.approve();
 
         certification.getTrainer().getUser().updateRole(UserRole.TRAINER);
         certification.getTrainer().updateApprovedAt(LocalDateTime.now());
@@ -94,7 +96,9 @@ public class AdminServiceImpl implements AdminService {
         Certification certification = certificationRepository.findById(certId)
                 .orElseThrow(() -> new IllegalArgumentException("Certification not found with id: " + certId));
 
-        certification.updateApprovalStatus(false, true);
+//        certification.setRejected(true);
+//        certification.setApproved(false);
+        certification.reject();
 
         certification.getTrainer().getUser().updateRole(UserRole.USER);
 

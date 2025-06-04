@@ -384,7 +384,7 @@ public class TrainerServiceImpl implements TrainerService {
         return certificationRepository.findAllByTrainer_TrainerIdIn(trainerIds).stream()
                 .collect(Collectors.groupingBy(
                         certification -> certification.getTrainer().getTrainerId(),
-                        Collectors.mapping(CertificationDTO::fromEntity, Collectors.toList())
+                        Collectors.flatMapping(certification -> CertificationDTO.fromEntity(certification).stream(), Collectors.toList())
                 ));
     }
 
@@ -453,7 +453,7 @@ public class TrainerServiceImpl implements TrainerService {
         List<Certification> certifications = certificationRepository.findByTrainer_TrainerId(trainerId);
 
         return certifications.stream()
-                .map(CertificationDTO::fromEntity)
+                .flatMap(certification -> CertificationDTO.fromEntity(certification).stream())
                 .toList();
     }
 
@@ -558,12 +558,13 @@ public class TrainerServiceImpl implements TrainerService {
         try {
             String folderName = "certifications/" + trainer.getTrainerId() + "/";
             fileUrl = fileUploaderService.uploadFile(certificationFile, folderName);
-            Certification certification = new Certification();
-            certification.setCertName(certificationDTO.certName());
-            certification.setIssuingBody(certificationDTO.issuingBody());
-            certification.setIssueDate(certificationDTO.issueDate());
-            certification.setFileUrl(fileUrl);
-            certification.setApproved(false);
+            Certification certification = Certification.builder()
+                    .trainer(trainer)
+                    .certName(certificationDTO.certName())
+                    .issuingBody(certificationDTO.issuingBody())
+                    .issueDate(certificationDTO.issueDate())
+                    .fileUrl(fileUrl)
+                    .build();
 
             trainer.addCertification(certification);
 
