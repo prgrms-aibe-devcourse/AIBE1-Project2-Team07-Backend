@@ -27,6 +27,7 @@ dependencies {
     runtimeOnly 'com.mysql:mysql-connector-j'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    runtimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
@@ -40,9 +41,9 @@ dependencies {
     // https://mvnrepository.com/artifact/io.jsonwebtoken/jjwt-jackson
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 
-    implementation 'dev.langchain4j:langchain4j-mcp:1.0.0-beta4'
-    implementation 'dev.langchain4j:langchain4j-google-ai-gemini-spring-boot-starter:1.0.0-beta4'
-    implementation 'dev.langchain4j:langchain4j-spring-boot-starter:1.0.0-beta4'
+    implementation 'dev.langchain4j:langchain4j-mcp:1.0.0-beta5'
+    implementation 'dev.langchain4j:langchain4j-google-ai-gemini-spring-boot-starter:1.0.0-beta5'
+    implementation 'dev.langchain4j:langchain4j-spring-boot-starter:1.0.0-beta5'
 
     implementation(platform("software.amazon.awssdk:bom:2.31.38"))
     implementation("software.amazon.awssdk:s3")
