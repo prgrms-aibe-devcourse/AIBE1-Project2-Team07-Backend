@@ -36,7 +36,6 @@ class PetUserRepositoryTest {
     @AfterEach
     void tearDown() {
         petUserRepository.delete(testUser);
-        
     }
 
     @Test
