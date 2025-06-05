@@ -4,8 +4,10 @@ import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
 import org.lucky0111.pettalk.domain.common.BaseTimeEntity;
 import org.lucky0111.pettalk.domain.common.UserRole;
+import software.amazon.awssdk.annotations.NotNull;
 
 import java.util.UUID;
 
@@ -38,9 +40,15 @@ public class PetUser extends BaseTimeEntity {
     private String status;
 
     @Builder
-    public PetUser(String name, String email, String nickname, String profileImageUrl, String provider, String socialId) {
+    public PetUser(@NonNull String name,
+                   @NonNull String email,
+                   @NonNull String nickname,
+                   @NonNull String profileImageUrl,
+                   @NonNull String provider,
+                   @NotNull String socialId) {
         this.name = name;
         this.email = email;
+        this.role = UserRole.USER;
         this.nickname = nickname;
         this.profileImageUrl = profileImageUrl;
         this.provider = provider;
