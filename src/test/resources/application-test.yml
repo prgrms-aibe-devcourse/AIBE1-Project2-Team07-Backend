@@ -68,7 +68,7 @@ front-url: http://localhost:3000/
 
 langchain4j:
   mcp:
-    sse-url: https://aibe1-project2-team07-mcp.onrender.com/sse
+    sse-url: http://localhost:8446/sse
 
   google-ai-gemini:
     chat-model:
