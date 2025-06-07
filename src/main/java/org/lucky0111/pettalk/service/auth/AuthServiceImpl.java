@@ -10,24 +10,24 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
-    private final JwtTokenService jwtTokenService;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Override
     public TokenDTO logout(String accessToken) {
         try {
-            TokenStatus tokenStatus = jwtTokenService.validateToken(accessToken);
+            TokenStatus tokenStatus = jwtTokenProvider.validateToken(accessToken);
 
             switch (tokenStatus) {
                 case EXPIRED -> throw new CustomException("엑세스 토큰 만료. 로그인을 다시 해주세요.", HttpStatus.UNAUTHORIZED);
                 case INVALIDATED -> throw new CustomException("엑세스 토큰이 유효하지 않습니다.", HttpStatus.FORBIDDEN);
             }
 
-            String deleteToken = jwtTokenService.deleteRefreshToken(accessToken);
+            String deleteToken = jwtTokenProvider.deleteRefreshToken(accessToken);
             return TokenDTO.builder()
                     .accessToken(deleteToken)
-                    .accessTokenExpiresIn(jwtTokenService.getExpiresInSeconds(deleteToken))
+                    .accessTokenExpiresIn(jwtTokenProvider.getExpiresInSeconds(deleteToken))
                     .refreshToken(deleteToken)
-                    .refreshTokenExpiresIn(jwtTokenService.getExpiresInSeconds(deleteToken))
+                    .refreshTokenExpiresIn(jwtTokenProvider.getExpiresInSeconds(deleteToken))
                     .build();
         } catch (Exception e) {
             throw new CustomException("로그아웃 실패", HttpStatus.INTERNAL_SERVER_ERROR);
@@ -37,19 +37,19 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public TokenDTO reissue(String refreshToken) {
         try {
-            TokenStatus tokenStatus = jwtTokenService.validateToken(refreshToken);
+            TokenStatus tokenStatus = jwtTokenProvider.validateToken(refreshToken);
 
             switch (tokenStatus) {
                 case EXPIRED -> throw new CustomException("리프레시 토큰 만료. 로그인을 다시 해주세요.", HttpStatus.UNAUTHORIZED);
                 case INVALIDATED -> throw new CustomException("리프레시 토큰이 유효하지 않습니다.", HttpStatus.FORBIDDEN);
             }
 
-            String accessToken = jwtTokenService.reissue(refreshToken);
+            String accessToken = jwtTokenProvider.reissue(refreshToken);
             return TokenDTO.builder()
                     .accessToken(accessToken)
-                    .accessTokenExpiresIn(jwtTokenService.getExpiresInSeconds(accessToken))
+                    .accessTokenExpiresIn(jwtTokenProvider.getExpiresInSeconds(accessToken))
                     .refreshToken(refreshToken)
-                    .refreshTokenExpiresIn(jwtTokenService.getExpiresInSeconds(refreshToken))
+                    .refreshTokenExpiresIn(jwtTokenProvider.getExpiresInSeconds(refreshToken))
                     .build();
         } catch (Exception e) {
             throw new CustomException("리프레시 토큰 재발급 실패", HttpStatus.INTERNAL_SERVER_ERROR);

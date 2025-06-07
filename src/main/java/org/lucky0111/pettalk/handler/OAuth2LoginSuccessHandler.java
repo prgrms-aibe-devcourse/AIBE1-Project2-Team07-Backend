@@ -4,7 +4,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.lucky0111.pettalk.service.auth.JwtTokenService;
+import org.lucky0111.pettalk.service.auth.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,18 +20,18 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     @Value("${front-url}")
     private String frontUrl;
 
-    private final JwtTokenService tokenService;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest req,
                                         HttpServletResponse res,
                                         Authentication authentication) throws IOException, ServletException {
         try {
-            String accessToken = tokenService.createAccessToken(authentication);
-            String refreshToken = tokenService.createRefreshToken(authentication);
-            long accessTokenExpiresIn = tokenService.getExpiresInSeconds(accessToken);
-            long refreshTokenExpiresIn = tokenService.getExpiresInSeconds(refreshToken);
-            tokenService.saveRefreshToken(accessToken);
+            String accessToken = jwtTokenProvider.createAccessToken(authentication);
+            String refreshToken = jwtTokenProvider.createRefreshToken(authentication);
+            long accessTokenExpiresIn = jwtTokenProvider.getExpiresInSeconds(accessToken);
+            long refreshTokenExpiresIn = jwtTokenProvider.getExpiresInSeconds(refreshToken);
+            jwtTokenProvider.saveRefreshToken(accessToken);
 
             String redirectUrl = UriComponentsBuilder
                     .fromUriString(frontUrl + "auth/oauth2/callback")

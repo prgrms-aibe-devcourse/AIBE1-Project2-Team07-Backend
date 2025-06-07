@@ -13,7 +13,7 @@ import org.lucky0111.pettalk.util.auth.JwtUtil;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -23,9 +23,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-@Service
+@Component
 @RequiredArgsConstructor
-public class JwtTokenService {
+public class JwtTokenProvider {
     private final JwtUtil jwtUtil;
     private final PetUserRepository petUserRepository;
     private final RefreshTokenRepository refreshTokenRepository;
