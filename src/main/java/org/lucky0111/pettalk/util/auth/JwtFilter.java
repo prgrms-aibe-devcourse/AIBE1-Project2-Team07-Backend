@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.lucky0111.pettalk.domain.common.TokenStatus;
 import org.lucky0111.pettalk.domain.dto.auth.CustomOAuth2User;
 import org.lucky0111.pettalk.domain.dto.error.ErrorResponseDTO;
-import org.lucky0111.pettalk.service.auth.JwtTokenService;
+import org.lucky0111.pettalk.service.auth.JwtTokenProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class JwtFilter extends OncePerRequestFilter {
-    private final JwtTokenService tokenProvider;
+    private final JwtTokenProvider tokenProvider;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {

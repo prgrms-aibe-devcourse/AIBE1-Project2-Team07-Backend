@@ -1,0 +1,77 @@
+server:
+  port: 8445
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
+
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb?DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;
+    username: test
+    password: 1234
+
+  security:
+    oauth2:
+      client:
+        registration:
+          naver:
+            client-name: naver
+            client-id: naver_client_id
+            client-secret: naver_client_secret
+            client-authentication-method: client_secret_post
+            redirect-uri: http://localhost:8445/login/oauth2/code/naver
+            authorization-grant-type: authorization_code
+            scope: scope1,scope2
+
+          kakao:
+            client-name: kakao
+            client-id: kakao_client_id
+            client-secret: kakao_client_secret
+            client-authentication-method: client_secret_post
+            redirect-uri: http://localhost:8445/login/oauth2/code/kakao
+            authorization-grant-type: authorization_code
+            scope: scope1,scope2
+
+        provider:
+          naver:
+            authorization-uri: ${NAVER_AUTHORIZATION_URI}
+            token-uri: ${NAVER_TOKEN_URI}
+            user-info-uri: ${NAVER_USER_INFO_URI}
+            user-name-attribute: ${NAVER_USER_NAME_ATTRIBUTE}
+
+          kakao:
+            authorization-uri: ${KAKAO_AUTHORIZATION_URI}
+            token-uri: ${KAKAO_TOKEN_URI}
+            user-info-uri: ${KAKAO_USER_INFO_URI}
+            user-name-attribute: ${KAKAO_USER_NAME_ATTRIBUTE}
+
+  # JWT
+  jwt:
+    # openssl rand -base64 32
+    secret: 123abc456def789ghijk0123456789lmno # 테스트용 비밀 키
+    access-token-expiration-ms: 3600000 # 1시간
+    refresh-token-expiration-days: 30 # 30일
+
+open-api:
+  dev-server-url: http://localhost:8445/
+
+front-url: http://localhost:3000/
+
+langchain4j:
+  mcp:
+    sse-url: http://localhost:8446/sse
+
+  google-ai-gemini:
+    chat-model:
+      api-key: google_ai_gemini_api_key
+      model-name: gemini-2.0-flash
+      log-requests-and-responses: true
