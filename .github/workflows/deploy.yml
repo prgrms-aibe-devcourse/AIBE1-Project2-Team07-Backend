@@ -1,0 +1,35 @@
+name: Auto Deploy to EC2
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker stop pet-talk-backend || true
+            docker rm pet-talk-backend || true
+            docker pull ghcr.io/prgrms-aibe-devcourse/aibe1-project2-team07-backend:main
+            docker run -d -p 8444:8444 \
+              -e SPRING_PROFILES_ACTIVE=dev \
+              -e DB_URL=jdbc:mysql://pet-talk-db.cxk0ssqi8ba9.ap-northeast-2.rds.amazonaws.com:3306/petalk \
+              -e DB_USERNAME=admin \
+              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+              -e JWT_SECRET=dummysecretkey123456789012345678901234567890 \
+              -e JWT_ACCESS_TOKEN_EXPIRATION_MS=3600000 \
+              -e JWT_REFRESH_TOKEN_EXPIRATION_DAYS=30 \
+              -e FRONT_URL=https://jinsohee.store \
+              --name pet-talk-backend \
+              ghcr.io/prgrms-aibe-devcourse/aibe1-project2-team07-backend:main
+            sleep 10
+            docker ps | grep pet-talk-backend
